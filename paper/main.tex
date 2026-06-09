@@ -367,7 +367,9 @@ rather than in the pipeline:
   \item[A1 Fleet fanout] Firmware pushed to an anomalously large
     number of distinct BMS units within a short window, exceeding any
     authorized rollout pace. Endpoint verification cannot see this
-    pattern. Detected by rule~R5.
+    pattern. Detected by rule~R5 only when the fanout originates from an
+    unauthorized source; authorized-source fanout inside the RAT envelope
+    is out of scope (\S\ref{sec:cascade-fix}).
   \item[A2 Unauthorized source] Firmware originates from an IP not
     listed in the operator's Rollout-Authorization Table. Detected by
     rule~R2.
@@ -698,9 +700,9 @@ sweep in \S\ref{sec:e21}.
         advertised firmware size. \\
     \texttt{expected\_firmware\_version}    & Version number reported in
         the OTA header for control-plane sanity check. \\
-    \texttt{max\_concurrent\_targets} & Informational cap on how many
-        distinct destinations a rollout should hit in one R5
-        window. \\
+    \texttt{max\_concurrent\_targets} & Enforced per-rollout cap on the
+        number of concurrent active sessions a rollout may hold; the
+        controller denies admission beyond it (0~$=$~unlimited). \\
     \texttt{rollback\_window}         & Optional
         \{\texttt{min\_version}, \texttt{max\_version}\} pair
         authorizing a rollback range for this rollout
@@ -912,6 +914,18 @@ when a reload fails verification.
 This section answers five research questions about \otashield{} with
 the testbed and methodology described in
 \S\ref{sec:testbed}--\ref{sec:methodology}.
+
+\noindent\emph{Main result map.} The story rests on five results. E8 is the
+headline designed-family detection (F\textsubscript{1}~=~\EEightstochasticFOneMean{}).
+E12 is benign-rollout admission (zero drops on
+\EOneTwobenignrolloutScenarioTotal{} legitimate events). E19 and \Enineteenp{}
+are rollback detection and its first-contact recall limitation. E21, E20, and
+E23 are the boundary failures (adaptive mimicry, brokered MQTT, TCP
+segmentation). E10, E13, E14, and E18 measure the baseline comparison,
+override capacity, latency, and parser portability. The remaining experiments
+(E1, E2, E4, E6, E7b, E11, E12b, E22) are correctness checks and build
+provenance that support these without changing the story; Table~\ref{tab:results}
+indexes all of them.
 
 \begin{itemize}
   \item \textbf{RQ1.} Does the detector classify attack and benign OTA
@@ -2628,8 +2642,10 @@ stale-window path (\S\ref{sec:e12b}), not by a data-plane rule. Two harness
 constraints make a full deployed-build matrix uninformative: per-event
 reset isolates single
 packets, so the R5 fleet-fanout counter cannot fire by construction, and
-\texttt{max\_concurrent\_targets} is an informational cap whose overflow is
-unenforced by design. We therefore report only the in-scope
+although the controller enforces \texttt{max\_concurrent\_targets}
+(\S\ref{sec:policy}), the per-event reset keeps the concurrent-session
+count from accumulating, so the cap cannot be exercised in this harness.
+We therefore report only the in-scope
 active-authorized confirmation and do not treat the off-parameter states as
 detection events; a containment-oriented matrix would require the
 5-tuple-indexed hold register of \S\ref{sec:known-correctness} behind a P4
