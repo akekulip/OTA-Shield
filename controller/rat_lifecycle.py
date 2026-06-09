@@ -114,10 +114,13 @@ def _load_public_key(pub_path: Path):
 
 
 def verify_rat_signature(rat_path: Path, sig_path: Path,
-                         pub_path: Path) -> None:
+                         pub_path: Path, rat_bytes=None) -> None:
     """Raise SignatureError if the signature does not verify.
 
-    Returns None on success. pynacl is imported lazily.
+    Returns None on success. pynacl is imported lazily. If `rat_bytes` is
+    given, those exact bytes are verified instead of re-reading `rat_path`;
+    callers pass the same buffer they will parse, closing the verify/parse
+    time-of-check/time-of-use gap.
     """
     try:
         from nacl.exceptions import BadSignatureError  # type: ignore
@@ -135,7 +138,7 @@ def verify_rat_signature(rat_path: Path, sig_path: Path,
             sig = bytes.fromhex(sig.decode().strip())
         except Exception as exc:
             raise SignatureError(f"Malformed signature in {sig_path}") from exc
-    message = _canonical_bytes(rat_path)
+    message = rat_bytes if rat_bytes is not None else _canonical_bytes(rat_path)
     try:
         vk.verify(message, sig)
     except BadSignatureError as exc:
@@ -317,13 +320,19 @@ class RatLifecycleManager:
         if not self.rat_path.exists():
             raise FileNotFoundError(f"RAT file vanished: {self.rat_path}")
 
+        # Read the manifest exactly once; verify and parse the SAME bytes so a
+        # concurrent writer cannot swap the file between the signature check
+        # and the parse (TOCTOU).
+        raw_bytes = self.rat_path.read_bytes()
+
         signed = self.sig_path.exists()
         if signed:
             if not self.pub_path.exists():
                 raise SignatureError(
                     f"Signature {self.sig_path.name} present but "
                     f"public key {self.pub_path} missing")
-            verify_rat_signature(self.rat_path, self.sig_path, self.pub_path)
+            verify_rat_signature(self.rat_path, self.sig_path, self.pub_path,
+                                 rat_bytes=raw_bytes)
         else:
             if not self.allow_unsigned:
                 raise SignatureError(
@@ -339,7 +348,7 @@ class RatLifecycleManager:
                     self.rat_path.name, self.rat_path)
                 logger.warning(banner)
 
-        raw = json.loads(self.rat_path.read_text())
+        raw = json.loads(raw_bytes)
         entries = parse_rat_entries(raw)
 
         # Atomic swap — a digest-loop thread calling snapshot() either

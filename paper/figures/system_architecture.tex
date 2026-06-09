@@ -40,7 +40,7 @@
   \node[cpbox, right=56mm of rules, yshift=-6mm]
       (ctrl) {OTA-Shield controller\\\scriptsize (Python + BF Runtime)};
   \node[cpbox, below=6mm of ctrl]
-      (rat)  {RAT-aware arbiter\\\scriptsize Gate~A (R1/R5) + Gate~B (R6)\\HOLD $\to$ PASS or DROP};
+      (rat)  {RAT-aware arbiter\\\scriptsize Gate~A (R1) + Gate~B (R6)\\HOLD $\to$ PASS or DROP};
   \node[file, below=7mm of rat]
       (ratf) {Rollout-Authorization Table\\\scriptsize (policy manifest)};
   \node[file, left=10mm of ratf]

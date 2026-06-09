@@ -18,7 +18,7 @@
 #include "rule_r6_rollback.p4"
 
 const port_t PORT_VISION = 8;
-const port_t PORT_HULK   = 11;
+const port_t PORT_HULK   = 9;   /* 15/1 = DEV_PORT 9 (links at 25G); 15/3 = 11 was stale */
 const port_t PORT_CPU    = 64;
 
 control Ingress(
@@ -97,7 +97,7 @@ control Ingress(
     Register<bit<8>, bit<8>>(256, 0) hold_armed_reg;
     RegisterAction<bit<8>, bit<8>, bit<8>>(hold_armed_reg) hold_armed_combo = {
         void apply(inout bit<8> v, out bit<8> r) {
-            if (meta.arm_eligible == 1) {  /* RV-4: only R5/R6-driven HOLDs arm */
+            if (meta.arm_eligible == 1) {  /* RV-4: only R5-driven HOLDs arm (set in policy_engine set_hold_arm) */
                 v = 8w1;                   /* arm the slot */
             }
             r = v;                         /* always read */

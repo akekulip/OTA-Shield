@@ -1,6 +1,8 @@
 % OTA-Shield — Policy decision flowchart (two-stage arbiter).
-% Reflects the evaluated design: R2 and R4 terminal; R1/R5/R6 go
-% through the control-plane Gate A / Gate B arbiter.
+% Deployed build: R2 and R4 are terminal; R1 goes through Gate A and R6
+% through Gate B in the control-plane arbiter. R5 is r2-gated (it co-fires
+% with R2 only, terminal DROP, and otherwise serves as fleet-fanout
+% telemetry), so it never reaches Gate A.
 \begin{tikzpicture}[
     font=\footnotesize,
     >=Stealth,
@@ -44,16 +46,28 @@
   \node[gate, right=14mm of r6] (gateB) {\textbf{Gate~B}\\rollback\_window\\check};
   \draw[arrow] (r6) -- node[lbl, above]{yes (HOLD)} (gateB);
 
-  %--- R1 or R5 arbitration (Gate A) --------------------------------------
-  \node[decision, below=of r6] (r15) {R1 or R5\\fired?};
-  \draw[arrow] (r6) -- node[lbl, left]{no} (r15);
+  %--- R1 arbitration (Gate A) --------------------------------------------
+  %  On the deployed build R5 is r2-gated, so it never reaches Gate A:
+  %  it only co-fires with R2 (terminal DROP) and otherwise serves as
+  %  fleet-fanout telemetry. R1 is the sole behavioural rule at Gate A.
+  \node[decision, below=of r6] (r1) {R1\\fired?};
+  \draw[arrow] (r6) -- node[lbl, left]{no} (r1);
 
-  \node[gate, right=14mm of r15] (gateA) {\textbf{Gate~A}\\rollout match?};
-  \draw[arrow] (r15) -- node[lbl, above]{yes (HOLD)} (gateA);
+  \node[gate, right=14mm of r1] (gateA) {\textbf{Gate~A}\\rollout match?};
+  \draw[arrow] (r1) -- node[lbl, above]{yes (HOLD)} (gateA);
 
   %--- No rule fired → PASS ------------------------------------------------
-  \node[pass, below=of r15] (pass_norule) {\textbf{PASS}\\no rule fired};
-  \draw[arrow] (r15) -- node[lbl, left]{no} (pass_norule);
+  \node[pass, below=of r1] (pass_norule) {\textbf{PASS}\\no rule fired};
+  \draw[arrow] (r1) -- node[lbl, left]{no} (pass_norule);
+
+  %--- Side note: R5 is r2-gated (telemetry behind R2) --------------------
+  \node[draw, dashed, rounded corners=2pt, fill=gray!8, align=left,
+        font=\scriptsize, text width=33mm, left=10mm of r2, anchor=east]
+        (r5note)
+        {\textbf{R5 (fleet fanout):} r2-gated. Co-fires with R2 only
+         (terminal DROP); otherwise fleet-fanout telemetry, not an
+         independent Gate-A path.};
+  \draw[dashed, black!35] (r5note.east) -- (r2.west);
 
   %--- Gate outcomes (duplicated per gate to avoid 4-way collision) --------
   \node[pass, right=10mm of gateB, yshift=4mm]  (allowB) {\textbf{ALLOW}};

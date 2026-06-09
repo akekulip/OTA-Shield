@@ -1,8 +1,10 @@
 # OTA-Shield
 
-In-network detection of coordinated OTA firmware distribution campaigns for BESS site networks, using P4 programmable switches.
+A hardware-measured reference architecture (Intel Tofino / P4-TNA) for in-network OTA rollout admission and bounded firmware-attack detection on BESS site networks.
 
-**Core claim:** OTA-Shield detects coordinated OTA distribution campaigns at an observable internal network choke point by monitoring fleet-level connection concurrency, timing, and session characteristics — providing detection capability that no endpoint or per-flow defense possesses.
+**What it is:** OTA-Shield parses a cleartext reference MQTT OTA channel in the data plane and uses a control-plane Rollout-Authorization Table (RAT) arbiter to admit authorized firmware rollouts and operator rollbacks while detecting a bounded family of OTA attacks (replay, unauthorized source, oversize, signed rollback). It is a reference design evaluated on a 50-unit emulated BMS testbed, not a universal OTA detector.
+
+**Scope (honest):** detection requires a cleartext segment after TLS/VPN termination; the fleet-fanout rule (R5) counts only unauthorized-source fanout (r2-gated on the deployed build), so a stolen-credential attacker inside the rollout envelope is out of scope for R5; switch line-rate is not claimed. See the paper for the full threat model and the measured blind zones (adaptive mimicry, TCP segmentation, brokered MQTT).
 
 ## Project Structure
 

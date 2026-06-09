@@ -114,6 +114,8 @@ control FleetMonitor(
         actions = { set_r5_fired; @defaultonly NoAction; }
         size = 2;
         const entries = {
+            /* fire when count > R5_THRESHOLD_CONST (=4), i.e. on the 5th
+             * distinct target. Keep the lower bound = R5_THRESHOLD_CONST+1. */
             (16w5 .. 16w0xFFFF) : set_r5_fired();
         }
         default_action = NoAction;
