@@ -234,10 +234,10 @@ all claims to the reference profile measured here. Our contributions are:
     (oversize), R5 (fleet fanout, telemetry-gated behind the terminal R2
     drop on the deployed build), plus a per-BMS
     version-monotonicity register (R6). R1 (rapid replay) is
-    cadence-gated and compiled out below
-    $\tau_{\mathrm{R1}}=14\,400$~s; under realistic BMS cadences it
-    does not fire and no headline claim relies on
-    it~\cite{binh2026p4mqtt}.
+    cadence-gated: under realistic benign BMS cadences it does not
+    false-fire, and in fast-cadence deployments it is compiled out below
+    $\tau_{\mathrm{R1}}=14\,400$~s; where it is enabled it supplies the
+    rapid-replay half of the E8 headline F\textsubscript{1}~\cite{binh2026p4mqtt}.
   \item An \textbf{R4 threshold derived from a 90-minute baseline
     trace} at measured percentiles
     (P99$+k\sigma$~\cite{almalawi2020addon,sharafaldin2018cicids}).
