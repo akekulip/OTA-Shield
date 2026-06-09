@@ -915,17 +915,14 @@ This section answers five research questions about \otashield{} with
 the testbed and methodology described in
 \S\ref{sec:testbed}--\ref{sec:methodology}.
 
-\noindent\emph{Main result map.} The story rests on five results. E8 is the
-headline designed-family detection (F\textsubscript{1}~=~\EEightstochasticFOneMean{}).
-E12 is benign-rollout admission (zero drops on
-\EOneTwobenignrolloutScenarioTotal{} legitimate events). E19 and \Enineteenp{}
-are rollback detection and its first-contact recall limitation. E21, E20, and
-E23 are the boundary failures (adaptive mimicry, brokered MQTT, TCP
-segmentation). E10, E13, E14, and E18 measure the baseline comparison,
-override capacity, latency, and parser portability. The remaining experiments
-(E1, E2, E4, E6, E7b, E11, E12b, E22) are correctness checks and build
-provenance that support these without changing the story; Table~\ref{tab:results}
-indexes all of them.
+\noindent\emph{Main result map.} The evaluation has five load-bearing
+results. E8 reports the headline designed-family detection result; E12 tests
+whether authorized rollouts are admitted without false drops; E19 and
+\Enineteenp{} isolate the rollback rule and its first-contact limitation; E21
+measures adaptive mimicry as the main adversarial blind zone; and E10 compares
+\otashield{} against CPU-based IDS baselines on identical traffic. The remaining
+experiments are support, boundary, or artifact-provenance checks, and the
+\emph{Role} column of Table~\ref{tab:results} marks each one.
 
 \begin{itemize}
   \item \textbf{RQ1.} Does the detector classify attack and benign OTA
@@ -1140,7 +1137,12 @@ one-sided bound described above.
 
 \begin{table*}[pos=htbp]
   \centering
-  \caption{Experiment roadmap indexed by RQ. Rows marked $\dagger$ use
+  \caption{Experiment roadmap indexed by RQ. The \emph{Role} column tiers
+  each experiment as \textsc{Primary} (a load-bearing claim: detection,
+  admission, rollback, mimicry blind zone, or baseline), \textsc{Boundary}
+  (a scope or blind-zone limit), \textsc{Support} (rule correctness,
+  capacity, latency, or cost), or \textsc{Artifact} (manifest-lifecycle and
+  build-provenance evidence). Rows marked $\dagger$ use
   the trial-level percentile bootstrap of \S\ref{sec:cluster-bootstrap};
   rows marked $\ddagger$ use Wilson 95\% CIs (or the Clopper--Pearson
   rule-of-three one-sided bound on zero-event cells); remaining rows are
@@ -1150,29 +1152,29 @@ one-sided bound described above.
   F\textsubscript{1}.}
   \label{tab:results}
   \footnotesize
-  \begin{tabular}{@{}l l l c l l@{}}
+  \begin{tabular}{@{}l l l c l l l@{}}
     \toprule
-    Exp.\ & Purpose & Type & Trials & RQ & Headline \\
+    Exp.\ & Purpose & Type & Trials & RQ & Role & Headline \\
     \midrule
-    E1  & Correctness (attack detection)   & deterministic & \EOneattackdetectionNTrials & RQ1 & F\textsubscript{1}~=~\EOneattackdetectionFOneMean \\
-    E2$^{\ddagger}$  & FP baseline         & deterministic & 5                           & RQ1 & 0 FP \\
-    E4  & RAT arbiter ablation             & deterministic & \EFourablationNTrials       & RQ2 & F\textsubscript{1}~=~\EFourablationFOneMean \\
-    E6  & Oversized firmware (R4)          & deterministic & \ESixaFouroversizeNTrials   & RQ1 & F\textsubscript{1}~=~\ESixaFouroversizeFOneMean \\
-    E8$^{\dagger}$  & Stochastic IID trials & stochastic   & \EEightstochasticNTrials    & RQ1 &
+    E1  & Correctness (attack detection)   & deterministic & \EOneattackdetectionNTrials & RQ1 & Support  & F\textsubscript{1}~=~\EOneattackdetectionFOneMean \\
+    E2$^{\ddagger}$  & FP baseline         & deterministic & 5                           & RQ1 & Support  & 0 FP \\
+    E4  & RAT arbiter ablation             & deterministic & \EFourablationNTrials       & RQ2 & Support  & F\textsubscript{1}~=~\EFourablationFOneMean \\
+    E6  & Oversized firmware (R4)          & deterministic & \ESixaFouroversizeNTrials   & RQ1 & Support  & F\textsubscript{1}~=~\ESixaFouroversizeFOneMean \\
+    E8$^{\dagger}$  & Stochastic IID trials & stochastic   & \EEightstochasticNTrials    & RQ1 & Primary  &
         F\textsubscript{1}~=~\EEightstochasticFOneMean{} [\EEightstochasticFOneCIlo{}, \EEightstochasticFOneCIhi{}] \\
-    E9  & Adversarial evasion sweeps       & deterministic & 3 $\times$ 4                & RQ3 & boundary maps \\
-    E10 & Suricata/Zeek baseline           & deterministic & 1 (PCAP replay)             & RQ4 & see \S\ref{sec:e10} \\
-    E11 & Controller digest-channel rate   & stress run    & 1                           & RQ5 & \ElevenAggregateLossPct{}\% aggregate loss \\
-    E12$^{\ddagger}$ & Benign rollout stress & stress run  & 3                           & RQ1 & 0 DROP on \EOneTwobenignrolloutScenarioTotal{} legit events \\
-    E13 & Override-table capacity          & stress run    & 1                           & RQ5 & sat.\ at 4--8~s \\
-    E14$^{\dagger}$ & Latency stage breakdown & post-hoc   & on E8                       & RQ5 & stage~1 p95 41.8~ms \\
-    E21 & Per-strategy mimicry             & deterministic & \EOneSevenmimicryNTrials{}  & RQ3 & \EOneSevenmimicryStrategyCatchPct\% coverage (\S\ref{sec:e21}) \\
-    E18 & Reference-channel portability    & deterministic & 1                           & RQ5 & \EeighteenMfourParsed/\EeighteenMfourVariants{} variants parse \\
-    E19 & R6 rollback ablation             & deterministic & \EOneNinerollbackNTrials    & RQ2 & F\textsubscript{1}~=~\EOneNinerollbackFOneMean{} with R6; collapses without R6 (\S\ref{sec:e19}) \\
-    E12b$^{\ddagger}$ & Signed-manifest fail-safe & stress run & \EOneTwobsignedNTrials   & RQ1 & last-known-good (LKG) pass-rate~=~100\% under sig-tamper (\S\ref{sec:e12b}) \\
-    E7b$^{\ddagger}$ & Long-horizon slow cadence & \EsevenbDurationHours{}~h trace & 1    & RQ3 & R6 recall \EsevenbTPR{}, precision \EsevenbOverallPrecision{} (\S\ref{sec:e7b}) \\
-    E23 & TCP-segmentation evasion         & deterministic & 250                         & RQ3 & header-split evades all rules (\S\ref{sec:e23-tcp}) \\
-    E20 & Brokered-MQTT topology           & deterministic & 80                          & RQ3 & IP-collapse drops benign fleet (\S\ref{sec:e20-broker}) \\
+    E9  & Adversarial evasion sweeps       & deterministic & 3 $\times$ 4                & RQ3 & Boundary & boundary maps \\
+    E10 & Suricata/Zeek baseline           & deterministic & 1 (PCAP replay)             & RQ4 & Primary  & see \S\ref{sec:e10} \\
+    E11 & Controller digest-channel rate   & stress run    & 1                           & RQ5 & Support  & \ElevenAggregateLossPct{}\% aggregate loss \\
+    E12$^{\ddagger}$ & Benign rollout stress & stress run  & 3                           & RQ1 & Primary  & 0 DROP on \EOneTwobenignrolloutScenarioTotal{} legit events \\
+    E13 & Override-table capacity          & stress run    & 1                           & RQ5 & Support  & sat.\ at 4--8~s \\
+    E14$^{\dagger}$ & Latency stage breakdown & post-hoc   & on E8                       & RQ5 & Support  & stage~1 p95 41.8~ms \\
+    E21 & Per-strategy mimicry             & deterministic & \EOneSevenmimicryNTrials{}  & RQ3 & Primary  & \EOneSevenmimicryStrategyCatchPct\% coverage (\S\ref{sec:e21}) \\
+    E18 & Reference-channel portability    & deterministic & 1                           & RQ5 & Boundary & \EeighteenMfourParsed/\EeighteenMfourVariants{} variants parse \\
+    E19 & R6 rollback ablation             & deterministic & \EOneNinerollbackNTrials    & RQ2 & Primary  & F\textsubscript{1}~=~\EOneNinerollbackFOneMean{} with R6; collapses without R6 (\S\ref{sec:e19}) \\
+    E12b$^{\ddagger}$ & Signed-manifest fail-safe & stress run & \EOneTwobsignedNTrials   & RQ1 & Artifact & last-known-good (LKG) pass-rate~=~100\% under sig-tamper (\S\ref{sec:e12b}) \\
+    E7b$^{\ddagger}$ & Long-horizon slow cadence & \EsevenbDurationHours{}~h trace & 1    & RQ3 & Support  & R6 recall \EsevenbTPR{}, precision \EsevenbOverallPrecision{} (\S\ref{sec:e7b}) \\
+    E23 & TCP-segmentation evasion         & deterministic & 250                         & RQ3 & Boundary & header-split evades all rules (\S\ref{sec:e23-tcp}) \\
+    E20 & Brokered-MQTT topology           & deterministic & 80                          & RQ3 & Boundary & IP-collapse drops benign fleet (\S\ref{sec:e20-broker}) \\
     \bottomrule
   \end{tabular}
 \end{table*}
