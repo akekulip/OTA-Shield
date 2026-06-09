@@ -1,0 +1,67 @@
+# T2.6 — Fleet scaling 100 / 250 / 500 (E23).
+#
+# Source: EXPERIMENT_DESIGN.md §1 T2.6; generalizes the 200-BMS M4 harness
+#         (run_m4_200bms.py + scenarios_m4.py) to three fleet sizes.
+#
+# 5 trials per fleet size (3 sizes x 5 = 15 trials). Fleet-500 alone is
+# rate-scaled (aggregate Poisson IAT 0.00045 s ~= 2222 pps) to fit the
+# 2.2 kpps replay cap; 100/250 use the native per-BMS 0.2 Hz model.
+
+schema_version: 1
+experiment_id: T2.6
+description: |
+  Fleet-size scaling sweep. Records F1, override-table occupancy at peak,
+  R5 Bloom FP observed vs analytical bound, and digest p99 latency at each
+  scale.
+scenarios:
+  - id: bess.fleet.100_native
+    fleet_size: 100
+    scaled_iat: false
+  - id: bess.fleet.250_native
+    fleet_size: 250
+    scaled_iat: false
+  - id: bess.fleet.500_scaled_iat
+    fleet_size: 500
+    scaled_iat: true
+trial_count: 5            # per fleet size
+held_out_fraction: 0.0
+master_seed: "0xCAFE"
+declared_duration_s: 120
+attack_fraction: 0.20
+primary_metric:
+  - f1_macro
+  - override_occupancy_peak
+  - r5_bloom_fp_observed_vs_predicted
+  - digest_latency_p99_ms
+falsifier: |
+  E23-500 R5 Bloom FP > 2x analytical bound, OR override table saturates
+  (causing benign drops).
+pass_criterion: |
+  E23-500 R5 Bloom FP within 2x analytical bound; no override saturation.
+wall_clock_estimate_h: 18
+statistical_test: |
+  per-cell Wilson on FP rate; cluster-bootstrap BCa (B=10000) on F1.
+generator:
+  module: experiments.scenarios_m4
+  func: pack_fleet_scaling
+  params:
+    duration_s: 120
+    attack_fraction: 0.20
+bloom_bound:
+  m_bits: 1024            # current single-BF size; analysis in r5_bloom_fp_analysis.py
+  n_bf: 3
+  falsifier_multiple: 2.0
+preflight:
+  required_integrity_items: [1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12]
+  scenarios_requiring_sanity_check:
+    - bess.fleet.100_native
+    - bess.fleet.250_native
+    - bess.fleet.500_scaled_iat
+  hardware_assertions:
+    - "ports 8 and 11 UP at 25G RS-FEC"
+    - "bf_switchd PID alive"
+    - "controller PID alive"
+    - "RAT signature verified at trial start (item 12)"
+    - "tcpreplay available on Vision (2.2 kpps replay for fleet-500)"
+replay_mode: pcap
+post_wait_s: 30

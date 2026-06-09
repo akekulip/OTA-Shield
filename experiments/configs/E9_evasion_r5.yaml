@@ -1,0 +1,12 @@
+# E9-R5: extended fanout sweep {3,4,5,6,7,10,15,20} — characterizes R5
+# detection sensitivity from below threshold to well above. 65 s pause
+# between fanouts so each starts with a clear bloom + counter window.
+# Total runtime ~ 8 fanouts × 65 s = ~9 min.
+scenario: pack_evasion_r5
+params:
+  fanouts: [3, 4, 5, 6, 7, 10, 15, 20]
+  sport_base: 59000
+description: |
+  Disjoint BMS ranges across fanouts (so R1 doesn't fire on revisits).
+  All events labeled LEGIT — the figure of merit is P(R5 fires) vs
+  fanout size, not classification accuracy.

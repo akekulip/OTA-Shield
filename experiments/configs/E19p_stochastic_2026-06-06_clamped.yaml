@@ -1,0 +1,36 @@
+# E19' Stochastic Rollback — Clamped Re-run (2026-06-06)
+#
+# Same parameters as E19p_rollback_stochastic.yaml with one change:
+# scenarios.py now applies n_legit = max(1, min(n_bms, ...)) to prevent
+# n_legit > n_bms, which caused hold_armed_reg cascade FPs in trials t08/t09
+# of the original 2026-06-06 run.  The clamp was already committed to
+# scenarios.py before this run.  Seeds are identical (base_seed=42,
+# trial_idx injected by sweep.py) so results are directly comparable.
+#
+# This run saves to runs/experiments/E19p_stochastic_2026-06-06_clamped/
+# and does NOT overwrite the original run kept at
+# runs/experiments/E19p_stochastic_2026-06-06/ (audit trail preserved).
+#
+# Same axes of randomisation:
+#   1. rollback delta ~ Uniform(9, 16)  → rollback_version in [32, 39]
+#   2. legit:attack split ~ Uniform(0.3, 0.7) of the 2*n_bms budget
+#      BUT n_legit is now clamped to n_bms = 20 before sending.
+#   3. inter-packet gap += Normal(0, 15 ms), clipped to [10, 200] ms
+scenario: pack_rollback_e19_stochastic
+params:
+  n_bms: 20
+  baseline_version: 48
+  min_delta: 9
+  max_delta: 16
+  p_benign_low: 0.3
+  p_benign_high: 0.7
+  nominal_gap_s: 0.020
+  jitter_std_s: 0.015
+  jitter_min_s: 0.010
+  jitter_max_s: 0.200
+  base_seed: 42
+description: |
+  E19' stochastic rollback clamped re-run 2026-06-06.
+  Identical to E19p_rollback_stochastic but with n_legit clamped to n_bms
+  in scenarios.py to eliminate hold_armed_reg cascade FPs from t08/t09.
+  Original run preserved for audit.

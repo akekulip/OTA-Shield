@@ -1,0 +1,14 @@
+scenario: pack_e7b_slow_cadence
+params:
+  duration_sec: 900
+  n_bms: 10
+  tau_r1_sec: 14400
+  attack_count: 10
+  seed: 0
+  baseline_version: 48
+description: |
+  Short gated-build validation of the E7b setup (rat_e7b.json, no rollback
+  window). Faithful slow cadence (interval >18000s so R1 stays silent over
+  the window); each BMS emits its first update within the start jitter.
+  Confirms: benign silent-pass (0 FP), rollback attacks post-dating a benign
+  fire R6 -> DROP, send path + logging work. NOT a statistical result.

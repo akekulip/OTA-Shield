@@ -1,0 +1,26 @@
+{
+  "_comment": "Deliberately stale RAT for E12 stale-manifest sub-scenario. valid_window_end is in the past so every genuine rollout event falls outside the active window and the arbiter should downgrade R1/R5 HOLDs to DROPs (precision collapses to the E4 ablation level). Paired with experiments/configs/E12b_stale_rat.yaml.",
+  "authorized_rollouts": [
+    {
+      "rollout_id": "stale-window-e12b",
+      "authorized_source_ips": ["10.0.1.10"],
+      "expected_firmware_version": 48,
+      "target_bms_list": [
+        "10.0.2.10", "10.0.2.11", "10.0.2.12", "10.0.2.13", "10.0.2.14",
+        "10.0.2.15", "10.0.2.16", "10.0.2.17", "10.0.2.18", "10.0.2.19",
+        "10.0.2.20", "10.0.2.21", "10.0.2.22", "10.0.2.23", "10.0.2.24",
+        "10.0.2.25", "10.0.2.26", "10.0.2.27", "10.0.2.28", "10.0.2.29",
+        "10.0.2.30", "10.0.2.31", "10.0.2.32", "10.0.2.33", "10.0.2.34",
+        "10.0.2.35", "10.0.2.36", "10.0.2.37", "10.0.2.38", "10.0.2.39",
+        "10.0.2.40", "10.0.2.41", "10.0.2.42", "10.0.2.43", "10.0.2.44",
+        "10.0.2.45", "10.0.2.46", "10.0.2.47", "10.0.2.48", "10.0.2.49",
+        "10.0.2.50", "10.0.2.51", "10.0.2.52", "10.0.2.53", "10.0.2.54",
+        "10.0.2.55", "10.0.2.56", "10.0.2.57", "10.0.2.58", "10.0.2.59"
+      ],
+      "valid_window_start": "2025-01-01T00:00:00Z",
+      "valid_window_end":   "2025-06-30T23:59:59Z",
+      "max_concurrent_targets": 5,
+      "expected_payload_size_range": [512, 2097152]
+    }
+  ]
+}

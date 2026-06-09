@@ -1,0 +1,47 @@
+# E12b (reviewer item M6): benign rollout rerun under the NEW
+# signed-manifest infrastructure.
+#
+# Context
+#   The original E12b (configs/E12b_stale_rat.yaml) tested the failure
+#   mode "controller starts with a stale, plain-JSON RAT manifest".
+#   The M6 laptop-side #122 work made that failure mode obsolete:
+#     * ed25519 signature verification at every load,
+#     * inotify hot-reload on rat.json / rat.json.sig,
+#     * max_concurrent_targets enforced by rat_lifecycle.py.
+#   This config reruns the benign rollout workload under the new
+#   pipeline AND injects a corrupted signature mid-trial to prove the
+#   reload-reject + last-known-good fallback path.
+#
+# Two-phase scenario (see scenarios_e12b.pack_benign_rollout_signed)
+#   Phase A  Valid signed manifest. Every event LEGIT. Expected 0 FP.
+#   Phase B  Stale-sig injection. Controller must REJECT the reload,
+#            retain last-known-good, and PASS the post-rejection probe
+#            burst.
+#
+# Requirements before running
+#   1. Controller is up with the signed manifest, e.g.
+#        python3 controller/ota_shield_controller.py \
+#            --rat controller/rat_e12.json \
+#            --rat-sig controller/rat_e12.json.sig \
+#            --rat-pub controller/rat.pub \
+#            --require-signed-rat
+#      The controller startup log MUST contain
+#        "RAT loaded: N entries, signed=True"
+#      before this config is submitted; run_e12b.py asserts that.
+#   2. controller/rat_e12.json.sig exists and verifies against rat.pub.
+#      gen_rat_key.py / sign_rat.py should have been run once per bench.
+#   3. Switch bf_switchd + P4 pipeline green, override table empty.
+#
+# After the run run_e12b.py restores the signature byte it corrupted
+# so the bench is left with a cleanly-verifying manifest.
+scenario: pack_benign_rollout_signed
+params:
+  n_trials: 20
+  include_stale_injection: true
+  seed: 0
+description: |
+  E12b signed-manifest rerun. Phase A = benign rollout under valid
+  signed manifest (expected 0 FP). Phase B = .sig byte flip, controller
+  must REJECT reload and fall back to last-known-good (expected 100%
+  reload-reject detection, 0 FP on the post-rejection probe). Runtime
+  ~10 min/trial (extra ~1 min for Phase B over plain E12).

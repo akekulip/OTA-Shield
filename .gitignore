@@ -1,0 +1,79 @@
+# ---- Secrets / credentials (NEVER commit) ----
+.env
+.env.*
+*.key
+*.pem
+rat_signing*
+*_secret*
+*_token*
+secrets.*
+settings.json
+credentials.json
+
+# ---- Large experiment data / logs (not part of the published artifact) ----
+runs/
+pilots/
+logs/
+**/runs/
+*.jsonl
+*.pcap
+*.pcap.gz
+*.db
+*.sqlite
+
+# ---- Build artifacts ----
+p4build/
+p4build/out/
+build/
+**/*.bfrt.json
+**/*.json.gz
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+*.so
+*.o
+
+# ---- LaTeX intermediates ----
+*.aux
+*.log
+*.out
+*.bbl
+*.blg
+*.toc
+*.lof
+*.lot
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+
+# ---- Backups / scratch ----
+*.bak
+*.bak_*
+*~
+*.swp
+.DS_Store
+.vscode/
+.idea/
+ota_overleaf.tar.gz
+ota_overleaf.zip
+temp/
+tmp/
+
+# ---- BF-SDE install artefacts ----
+/opt/bf-sde*
+
+# ---- Paper: downloaded reference PDFs, scratch drafts, backups, internal reviews ----
+1-s2.0-*.pdf
+mode_title__*.pdf
+*.prerewrite_*
+*.regen_*
+*.abs
+*.spl
+Screenshot*
+paper/reviews/
+paper/plan/
+paper/panel_results_review.md
+paper/review_*.md
+

@@ -1,0 +1,11 @@
+# E9-R4: oversize edge sweep around the 2 MiB threshold.
+# Runs ~5-6 large flows (1.5 MB to 8 MB) on distinct BMSes. Total runtime
+# scales with total bytes pushed (~30-60 s on 25 G with batched scapy).
+scenario: pack_evasion_r4
+params:
+  sizes_bytes: [1572864, 2086666, 2097152, 2107638, 4194304, 8388608]
+  base_bms: 0
+  sport_base: 58000
+description: |
+  Sizes <= 2097152 B (2 MiB) should NOT fire R4 (LEGIT). Sizes above
+  SHOULD fire (ATTACK). Maps the exact byte-count detection edge.

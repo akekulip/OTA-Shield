@@ -1,0 +1,82 @@
+# OTA-Shield comparison ruleset for Suricata — STATEFUL variant.
+#
+# Implements a more faithful mapping of R1, R2, R4, R5 using
+# Suricata's flowint, xbits, and flowbits primitives, so this
+# ruleset is what a Suricata user who actually knew those
+# primitives would likely author against the same PCAP.
+#
+# Tested against Suricata >= 6.0.10 for host-tracking xbits with
+# long expiries. R6 (version rollback) is a per-endpoint monotonic
+# check on a 32-bit field inside the OTA payload and is not
+# expressible in Suricata's rule DSL without a custom C module, so
+# no rule is offered here.
+#
+# Ground-truth labels come from the scenario generator, not from
+# Suricata; this file is only responsible for raising alerts.
+
+# ---------------------------------------------------------------------
+# R2 equivalent — unauthorized source.
+# Suricata matches the negated authorized-source list exactly.
+# ---------------------------------------------------------------------
+alert tcp ![10.0.1.10] any -> any 1883 ( \
+    msg:"OTAShieldR2: unauthorized MQTT source"; \
+    flow:to_server; \
+    content:"|32|"; offset:0; depth:1; \
+    classtype:policy-violation; sid:8100002; rev:2; )
+
+# ---------------------------------------------------------------------
+# R1 equivalent — rapid replay per destination BMS.
+# Uses xbits with per-destination tracking and a long expiry so the
+# "have we seen this BMS recently?" state outlives any single flow.
+# Limitation: xbits expiries are counted from set time, so a busy BMS
+# refreshes the bit on every hit; the second alert fires only after a
+# gap longer than the expiry — different from OTA-Shield's
+# last-seen-register semantics. This is honest.
+# ---------------------------------------------------------------------
+alert tcp 10.0.1.10 any -> any 1883 ( \
+    msg:"OTAShieldR1 seed: per-dst OTA seen"; \
+    flow:to_server; \
+    content:"|32|"; offset:0; depth:1; \
+    xbits:isnotset,r1_seen,track ip_dst,expire 14400; \
+    xbits:set,r1_seen,track ip_dst,expire 14400; \
+    noalert; sid:8100010; rev:1; )
+
+alert tcp 10.0.1.10 any -> any 1883 ( \
+    msg:"OTAShieldR1 fire: per-dst rapid replay"; \
+    flow:to_server; \
+    content:"|32|"; offset:0; depth:1; \
+    xbits:isset,r1_seen,track ip_dst,expire 14400; \
+    classtype:bad-unknown; sid:8100011; rev:1; )
+
+# ---------------------------------------------------------------------
+# R5 equivalent — fleet fanout approximation.
+# flowint counts MQTT PUBLISHes from the authorized source. This is
+# a source-rate proxy, not a distinct-destination counter (Suricata
+# cannot natively track cardinality of dst_ip). The threshold is
+# chosen to match OTA-Shield's expected fanout signature (> 4 BMS
+# in 60 s) under the workloads in the PCAP.
+# ---------------------------------------------------------------------
+alert tcp 10.0.1.10 any -> any 1883 ( \
+    msg:"OTAShieldR5 fanout proxy: >=5 OTA pubs in 60s"; \
+    flow:to_server; \
+    content:"|32|"; offset:0; depth:1; \
+    threshold:type threshold, track by_src, count 5, seconds 60; \
+    classtype:bad-unknown; sid:8100005; rev:2; )
+
+# ---------------------------------------------------------------------
+# R4 equivalent — cumulative session bytes via flowint.
+# flowint accumulates per-flow PUBLISH payload sizes using dsize
+# (approximation: dsize is packet-level, not OTA-payload-only).
+# A bigger threshold (2.0 MiB = 2097152) mirrors R4.
+# ---------------------------------------------------------------------
+alert tcp 10.0.1.10 any -> any 1883 ( \
+    msg:"OTAShieldR4 seed: session bytes accumulate"; \
+    flow:to_server; \
+    flowint:ota_bytes,+,dsize; \
+    noalert; sid:8100040; rev:1; )
+
+alert tcp 10.0.1.10 any -> any 1883 ( \
+    msg:"OTAShieldR4 fire: oversize OTA session"; \
+    flow:to_server; \
+    flowint:ota_bytes,>,2097152; \
+    classtype:bad-unknown; sid:8100041; rev:1; )

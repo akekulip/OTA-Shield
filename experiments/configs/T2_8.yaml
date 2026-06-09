@@ -1,0 +1,57 @@
+# T2.8 — TCP-evasion battery.
+#
+# Source: EXPERIMENT_DESIGN.md §1 T2.8; Adversary §4 (5-evasion battery).
+#
+# 5 evasions x 5 rules = 25 cells; 10 trials per cell = 250 trials total.
+# Produces the predicted-vs-observed detection heatmap (Table 9 / Fig F15).
+
+schema_version: 1
+experiment_id: T2.8
+description: |
+  TCP-evasion battery. Per-(evasion, rule) detection rate with BH-FDR
+  across 25 cells, compared to the predicted heatmap.
+evasions:
+  - split_mqtt_fh
+  - split_topic
+  - split_ota_hdr
+  - retransmit_dup_ota
+  - out_of_order
+rules:
+  - R1
+  - R2
+  - R4
+  - R5
+  - R6
+trial_count: 10           # per (evasion, rule) cell; 25 cells -> 250 trials
+held_out_fraction: 0.0
+master_seed: "0xCAFE"
+declared_duration_s: 30
+primary_metric:
+  - per_cell_detection_rate
+falsifier: |
+  Any of the 5 evasions fires an UNEXPECTED additional rule (observed
+  detection in an off-target cell where predicted == 0).
+pass_criterion: |
+  Observed detection matches the predicted heatmap: R2 survives all
+  evasions; R1/R4/R5/R6 fall to the header-split family as predicted.
+wall_clock_estimate_h: 6
+statistical_test: |
+  Wilson 95% per cell; BH-FDR across the 25 cells; Clopper-Pearson UB on
+  zero-event cells.
+generator:
+  module: traffic_gen.tcp_evasion
+  scenario_class: TcpEvasionBattery
+preflight:
+  required_integrity_items: [1, 2, 3, 5, 6, 9, 10, 11, 12]
+  scenarios_requiring_sanity_check:
+    - tcp_evasion
+  hardware_assertions:
+    - "ports 8 and 11 UP at 25G RS-FEC"
+    - "bf_switchd PID alive"
+    - "controller PID alive"
+    - "RAT signature verified at trial start (item 12)"
+    - "iptables NOTRACK rule present on Vision (no kernel TCP reassembly)"
+blockers:
+  - "sudoers must allow /usr/sbin/iptables for the decps user (NOTRACK)"
+replay_mode: live
+post_wait_s: 5

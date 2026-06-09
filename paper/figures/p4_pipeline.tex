@@ -1,0 +1,103 @@
+% OTA-Shield — P4 pipeline flow figure.
+% Standalone-compilable with `\documentclass{standalone}` + \usepackage{tikz}
+% and inside the paper via \input{figures/p4_pipeline}.
+%
+% Shows: ingress parser -> ingress MAU pipeline -> ingress deparser.
+% Each box is annotated with the MAU registers / tables it owns.
+% The 12-stage Tofino 1 pipeline budget is implicit in the layout.
+\begin{tikzpicture}[
+    font=\footnotesize,
+    >=Stealth,
+    node distance=3.5mm and 5mm,
+    parser/.style   ={draw, rounded corners=2pt, fill=blue!6,
+                      minimum height=7mm, minimum width=20mm, align=center},
+    mau/.style      ={draw, rounded corners=2pt, fill=green!7,
+                      minimum height=8mm, minimum width=30mm, align=center},
+    reg/.style      ={draw, dashed, rounded corners=1pt,
+                      fill=yellow!12, font=\scriptsize,
+                      minimum height=5mm, minimum width=28mm, align=center},
+    dep/.style      ={draw, rounded corners=2pt, fill=orange!10,
+                      minimum height=7mm, minimum width=22mm, align=center},
+    ctl/.style      ={draw, rounded corners=2pt, fill=red!8, thick,
+                      minimum height=7mm, minimum width=22mm, align=center},
+    arrow/.style    ={->, thin, >=Stealth, shorten >=0.5pt, shorten <=0.5pt},
+    lbl/.style      ={font=\scriptsize\itshape, text=black!70, inner sep=1.5pt,
+                      fill=white, fill opacity=0.92, text opacity=1,
+                      rounded corners=1pt}]
+
+  %--- Parser (left column) ------------------------------------------------
+  \node[parser] (eth)      {Ethernet};
+  \node[parser, below=of eth]         (ipv4)  {IPv4};
+  \node[parser, below=of ipv4]        (tcp)   {TCP};
+  \node[parser, below=of tcp]         (cls)   {is\_mqtt / is\_modbus};
+  \node[parser, below=of cls]         (fh)    {MQTT fixed hdr};
+  \node[parser, below=of fh]          (vi)    {VarInt (1-4 B)};
+  \node[parser, below=of vi]          (tp)    {topic[32]};
+  \node[parser, below=of tp]          (ota)   {OTA hdr 20 B};
+
+  \foreach \a/\b in {eth/ipv4, ipv4/tcp, tcp/cls, cls/fh, fh/vi, vi/tp, tp/ota} {
+    \draw[arrow] (\a) -- (\b);
+  }
+  \node[lbl, above=1mm of eth] {\textbf{Ingress Parser}};
+
+  %--- Ingress MAU pipeline (center column) --------------------------------
+  \node[mau, right=28mm of eth]            (l2)    {L2 forward};
+  \node[mau, below=of l2]                   (bms)   {BMS index lookup};
+  \node[mau, below=of bms]                  (topic) {OTA topic classifier};
+  \node[mau, below=of topic]                (sess)  {SessionManager};
+  \node[mau, below=of sess]                 (fleet) {FleetMonitor (R5)};
+  \node[mau, below=of fleet]                (sec)   {SecondaryRules (R1, R4, R6)};
+  \node[mau, below=of sec]                  (r2)    {R2 src-auth table};
+  \node[mau, below=of r2]                   (pol)   {PolicyEngine};
+  \node[mau, below=of pol]                  (ovr)   {session\_action\_override};
+
+  \foreach \a/\b in {l2/bms, bms/topic, topic/sess, sess/fleet,
+                     fleet/sec, sec/r2, r2/pol, pol/ovr} {
+    \draw[arrow] (\a) -- (\b);
+  }
+
+  % Parser -> ingress handoff
+  \draw[arrow, thick] (ota.east) to[out=0, in=180] (l2.west);
+
+  \node[lbl, above=1mm of l2] {\textbf{Ingress MAU pipeline}};
+
+  %--- Register callouts on the right (composite, 3 boxes for 3 MAUs) -----
+  \node[reg, right=14mm of sess, minimum height=10mm] (regSess)
+      {\textbf{SessionManager registers}\\
+       session\_bytes\_reg $u32\times 65536$\\
+       first\_ts\_reg $u32\times 65536$};
+  \node[reg, right=14mm of fleet, minimum height=10mm] (regFleet)
+      {\textbf{FleetMonitor registers}\\
+       R5 Bloom $3\times u8\times 1024$\\
+       r5\_count\_reg $u16$};
+  \node[reg, right=14mm of sec, minimum height=12mm] (regSec)
+      {\textbf{SecondaryRules registers}\\
+       r1\_last\_seen\_reg $u16\times 256$\\
+       coarse\_time\_reg $u32$\\
+       R6 version high-water $u32\times 256$};
+
+  \draw[arrow, dashed, black!50] (sess.east)  -- (regSess.west);
+  \draw[arrow, dashed, black!50] (fleet.east) -- (regFleet.west);
+  \draw[arrow, dashed, black!50] (sec.east)   -- (regSec.west);
+
+  %--- Deparser / digests --------------------------------------------------
+  \node[dep, below=4mm of ovr]  (dep)   {Ingress Deparser};
+  \node[dep, below=2mm of dep,  fill=orange!20] (dg)
+      {6 digest types\\classify/mqtt/session/r5/rule/hold};
+
+  \draw[arrow, thick] (ovr) -- (dep);
+  \draw[arrow, thick] (dep) -- (dg);
+
+  %--- Control plane sidebar (optional) -----------------------------------
+  \node[ctl, right=34mm of dg] (ctrl)
+      {OTA-Shield controller\\(Python + BF~Runtime)};
+  \draw[arrow, thick, <->] (dg.east) -- node[lbl,midway,above]{gRPC digest stream} (ctrl.west);
+
+  %--- Drop path -----------------------------------------------------------
+  \node[draw, fill=red!15, rounded corners=2pt,
+        right=24mm of pol,
+        minimum height=6mm] (drop)
+       {\textbf{drop} @ deparser};
+  \draw[arrow, thick, red!60!black] (pol.east) -- node[lbl, pos=0.5, above]{action\_code=DROP} (drop.west);
+
+\end{tikzpicture}

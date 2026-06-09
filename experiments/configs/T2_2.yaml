@@ -1,0 +1,80 @@
+# T2.2 — Threshold sensitivity sweep.
+#
+# Source: EXPERIMENT_DESIGN.md §1 T2.2; MASTER_LEDGER.md T2.2.
+#
+# R5 ∈ {2,4,8,16,31} (attack fanout)  ×
+# R1 ∈ {1,60,600,3600,14400,86400} s (simulated R1 interval via register pre-seed)
+# = 30 cells × 10 trials = 300 trials.
+#
+# Seed: sha256("T2.2-{r5}-{r1}-{trial_id}-0xCAFE")
+#
+# Per-trial scenario (two separate source IPs to keep R5 and R1 counts independent):
+#   1. R5 fanout: AUTH_SRC (10.0.1.10) → r5 distinct BMS 0..r5-1 (IPs .10..10+r5)
+#      size=1 (< RAT min_size 512) → RAT miss → R5 determines detection
+#   2. R1 replay: AUTH_SRC2 (10.0.1.11) → BMS 25 (IP 10.0.2.35, NOT in secondary RAT)
+#      R1_LAST_SEEN[25] pre-seeded on switch to coarse_now - r1
+#      size=1 → RAT miss → R1 determines detection
+#
+# Expected detection:
+#   R5: fires when fanout ≥ 5 (P4 threshold = 4, fires at count > 4)
+#   R1: fires when simulated interval < 14400 s (P4 threshold = 14400 s)
+#
+# Pass criterion (EXPERIMENT_DESIGN): F1-vs-parameter curves are monotone.
+
+schema_version: 1
+experiment_id: T2.2
+description: |
+  Threshold sensitivity sweep. Per-cell F1 over 30 cells
+  (R5 attack fanout × R1 simulated interval) × 10 trials = 300 trials.
+  Validates that the fixed operating point (R5=4, R1=14400 s) lies in the
+  well-detected region of the parameter space.
+
+r5_values: [2, 4, 8, 16, 31]    # attack fanout sizes
+r1_values: [1, 60, 600, 3600, 14400, 86400]   # simulated inter-arrival seconds
+
+trial_count: 10           # per cell; 30 cells -> 300 trials total
+master_seed: "0xCAFE"
+
+# BMS index used for R1 replay attack (IP 10.0.2.35, not in secondary-source RAT)
+r1_bms_idx: 25
+
+# Auth source for R5 fanout (in RAT for BMS .10-.59, but size=1 → RAT miss)
+auth_src: "10.0.1.10"
+# Auth source 2 for R1 replay (in RAT for BMS .10-.29 only; BMS 25 = .35 is outside)
+auth_src2: "10.0.1.11"
+
+declared_duration_s: 15    # brief per-trial execution window
+post_wait_s: 12            # wait for controller digest drain
+inter_trial_s: 72          # 70+ s for R5 window clear (matches sweep.py default)
+
+# Size=1 is below the RAT minimum size range of [512, 2097152].
+# This ensures the RAT arbiter misses even though the source IP is authorized,
+# so R5/R1 firing (not RAT override) determines the controller decision.
+attack_size_bytes: 1
+
+primary_metric:
+  - f1_macro_per_cell
+  - detection_rate_r5_curve    # fix r1=1, vary r5
+  - detection_rate_r1_curve    # fix r5=31, vary r1
+
+pass_criterion: |
+  F1-vs-parameter curves are monotone:
+  R5: detection rate increases as fanout increases (threshold at fanout~5)
+  R1: detection rate decreases as simulated interval increases
+  (transition at 14400 s = P4-compiled R1 threshold)
+
+falsifier: |
+  Curves are non-monotone — would indicate a threshold or RAT mismatch bug.
+
+wall_clock_estimate_h: 6.5     # 300 trials × (pre-seed + emit + 72s wait) ≈ 6.5 h
+
+statistical_test: |
+  cluster-bootstrap BCa per cell (B=10000); BH-FDR within sweep.
+  Per EXPERIMENT_DESIGN.md §1 T2.2.
+
+hardware_assertions:
+  - "ports 8 and 11 UP at 25G RS-FEC"
+  - "bf_switchd PID alive"
+  - "controller PID alive (grpc 127.0.0.1:50052)"
+  - "RAT signature verified"
+  - "R1_LAST_SEEN pre-seed via second bfrt_grpc client (client_id=5)"

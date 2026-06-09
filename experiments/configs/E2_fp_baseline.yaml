@@ -1,0 +1,13 @@
+# E2: Steady-state FP rate on legitimate traffic.
+# Authorized-source rollouts across the full fleet with realistic pacing.
+# No attacks. Target: FP count = 0 across all trials.
+scenario: legit_rollout
+params:
+  n_bms: 50
+  start_bms: 0
+  size: 1024
+  version: 48
+  inter_packet_s: 0.5
+  sport_base: 51000
+description: |
+  50 authorized PUBLISHes at 2 Hz — exercises R5 but RAT should clear.

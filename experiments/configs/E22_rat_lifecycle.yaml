@@ -1,0 +1,120 @@
+# E22: RAT-manifest lifecycle matrix (IJCIP reviewer M6).
+#
+# Five lifecycle cases × 20 stochastic trials = 100 total trials.
+# Each case exercises one phase of the RAT arbiter's lifecycle so the
+# reviewer can verify that the arbiter respects every manifest axis.
+#
+# Axis coverage:
+#   case1 pre_rollout          — time predicate BEFORE valid_window_start
+#   case2 active_authorized    — all axes match, expected PASS
+#   case3 active_unauthorized  — active window, per-event src/dst/size axis
+#                                 violation (mode sampled uniformly)
+#   case4 post_expiry          — time predicate AFTER valid_window_end
+#   case5 max_concurrent       — M6 cap enforcement: N admitted + overflow
+#                                 denied with rat_max_concurrent
+#
+# Seed / RNG discipline (matches E19'):
+#   per-trial seed = params.base_seed + trial_idx (trial_idx injected by
+#   run_e22.py). Reproducible across machines; see `scenarios_e22.py`.
+#
+# Prerequisites on the HW side before running:
+#   1. Controller up with --rat-path pointing at a path the driver owns.
+#      run_e22.py renders a FRESH signed manifest per case using
+#      `e22_rat_fixture()` (timestamps relative to now), drops it to
+#      that path, and waits for the inotify reload to settle.
+#   2. Override table flushed; R5 window cleared between cases.
+#   3. max_concurrent_targets on the CAPPED rollout matches
+#      params.max_concurrent (default 4).
+#
+# Figure of merit per case: per-decision confusion (PASS/DROP vs ground
+# truth) with bootstrap 95% CIs across 20 trials. See aggregate_e22.py.
+schema_version: 1
+experiment_id: E22_rat_lifecycle
+description: |
+  RAT-manifest lifecycle matrix: pre-rollout, active-authorized,
+  active-unauthorized, post-expiry, max-concurrent. 5 cases x 20 trials.
+trials_per_case: 20
+# Cases list drives both the driver (run_e22.py) and the aggregator
+# (aggregate_e22.py). Ordering is stable so `t00..t19` subdirectories
+# are reproducible.
+cases:
+  - case_id: case1_pre_rollout
+    builder: pack_e22_pre_rollout
+    params:
+      n_events: 8
+      nominal_gap_s: 0.030
+      jitter_std_s: 0.010
+      jitter_min_s: 0.005
+      jitter_max_s: 0.100
+      base_seed: 0
+    rat_fixture:
+      # Minutes relative to now; driver converts to ISO-8601 before
+      # writing the signed manifest.
+      valid_window_start_offset_min: 120
+      valid_window_end_offset_min:   180
+      max_concurrent_targets: 50
+  - case_id: case2_active_authorized
+    builder: pack_e22_active_authorized
+    params:
+      n_events: 8
+      nominal_gap_s: 0.030
+      jitter_std_s: 0.010
+      jitter_min_s: 0.005
+      jitter_max_s: 0.100
+      base_seed: 1000
+    rat_fixture:
+      valid_window_start_offset_min: -30
+      valid_window_end_offset_min:    30
+      max_concurrent_targets: 50
+  - case_id: case3_active_unauthorized
+    builder: pack_e22_active_unauthorized
+    params:
+      n_events: 9
+      nominal_gap_s: 0.030
+      jitter_std_s: 0.010
+      jitter_min_s: 0.005
+      jitter_max_s: 0.100
+      base_seed: 2000
+    rat_fixture:
+      valid_window_start_offset_min: -30
+      valid_window_end_offset_min:    30
+      max_concurrent_targets: 50
+  - case_id: case4_post_expiry
+    builder: pack_e22_post_expiry
+    params:
+      n_events: 8
+      nominal_gap_s: 0.030
+      jitter_std_s: 0.010
+      jitter_min_s: 0.005
+      jitter_max_s: 0.100
+      base_seed: 3000
+    rat_fixture:
+      valid_window_start_offset_min: -180
+      valid_window_end_offset_min:  -120
+      max_concurrent_targets: 50
+  - case_id: case5_max_concurrent
+    builder: pack_e22_max_concurrent
+    params:
+      max_concurrent: 4
+      n_overflow: 3
+      nominal_gap_s: 0.030
+      jitter_std_s: 0.010
+      jitter_min_s: 0.005
+      jitter_max_s: 0.100
+      base_seed: 4000
+    rat_fixture:
+      valid_window_start_offset_min: -30
+      valid_window_end_offset_min:    30
+      # NOTE: max_concurrent_targets here is the CAPPED rollout's cap.
+      # The driver additionally provisions an uncapped rollout so the
+      # scenario's LEGIT prefix lands on the capped entry first (entries
+      # are consulted in order; the capped rollout is emitted first in
+      # the fixture).
+      max_concurrent_targets: 4
+# Optional pacing between trials / cases so the R5 window clears and
+# concurrency slots prune. Consumed by run_e22.py.
+inter_trial_wait_s: 70
+inter_case_wait_s:  90
+# Post-wait window after the last packet of each trial before the
+# controller log is sliced.
+post_wait_s: 10

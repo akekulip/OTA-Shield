@@ -1,0 +1,37 @@
+# E18': QoS=0 reference-channel portability rerun (IJCIP reviewer M4).
+#
+# Extends the original E18 portability sheet with an explicit QoS=0
+# column. The reviewer asked what the parser does when the MQTT QoS
+# field is 0 — in that case the packet identifier in the variable header
+# is absent, so the OTAS firmware header shifts by two bytes and the
+# reference P4 parser (pre-M4 binary) misses it.
+#
+# M4 task #123 (completed in the tree at p4src/ota_shield.p4) adds a
+# parser branch for the QoS=0 offset. The switch has NOT been recompiled
+# yet, so the reviewer-facing wave is honest about it:
+#
+#   labels.json carries TWO expected columns:
+#     - expected_old_parser: what the deployed binary should do
+#     - expected_new_parser: what the recompiled binary should do
+#
+# The aggregator selects whichever column matches the live binary at
+# replay time; the paper text reports both.
+#
+# No HW run is required to produce this config: scenarios_m4.py emits
+# a pcap + labels.json pair that the lab can replay when the recompile
+# is available.
+scenario: pack_e18_qos0_portability
+module: experiments.scenarios_m4
+params:
+  seed: 0
+  dst_ip: "10.0.2.10"
+  inter_packet_s: 0.2
+output:
+  out_dir: "runs/m4"
+description: |
+  Eight MQTT PUBLISH variants: original six from E18 plus QoS=0 at three
+  topic lengths (16/32/64). Only the QoS=0 + 32B-topic case is expected
+  to switch from PARSER_MISS (old) to PARSED (new); the other two QoS=0
+  rows remain PARSER_MISS because the topic-length error dominates.
+  That specificity is the scientific point and is called out in the
+  aggregator JSON.

@@ -1,0 +1,164 @@
+% Auto-generated macro supplement for macros missing after
+% extract_paper_numbers.py run. All wrapped in \providecommand
+% so a future canonical regen can override.
+
+% --- E22 RAT-lifecycle matrix: REMOVED 2026-06-08 ---
+% The prior TP=474/FP=0/case2-TN=20 macros did not match any on-disk
+% aggregate. The only complete 5-case run
+% (runs/experiments/_agg/E22_rat_lifecycle_2026-06-06_recovered.json)
+% shows FP=227, with case2_active_authorized dropping 152/160 benign
+% rollouts (hold_armed_reg cascade). E22 is reported as cascade-blocked
+% in sec:e22; no E22 confusion-matrix macros are used.
+
+% --- E18 M4 expanded-variant rerun ---
+\providecommand{\EeighteenMfourVariants}{8}
+\providecommand{\EeighteenMfourOk}{7}
+\providecommand{\EeighteenMfourParsed}{4}
+\providecommand{\EeighteenMfourMissed}{4}
+
+% --- E7b slow-cadence long-horizon trace
+%     GATED + RV-4 build, re-run 2026-06-09 (the deployed binary). Source:
+%     runs/experiments/E7b_slow_cadence_gated_2026-06-09/t00/e7b_metrics.json
+%     (run_end n_events=200, 0 send_errors, 28434 s; controller_decisions
+%     sliced from switch decisions.jsonl by [RUN_T0, run_end]). Supersedes
+%     the un-gated values; resolves the prior double-definition. ---
+\providecommand{\EsevenbNEvents}{200}
+\providecommand{\EsevenbNBenign}{100}
+\providecommand{\EsevenbNAttack}{100}
+\providecommand{\EsevenbDurationHours}{7.9}
+\providecommand{\EsevenbCadenceKs}{18--22}
+\providecommand{\EsevenbBenignObserved}{20}
+\providecommand{\EsevenbBenignNoDecision}{80}
+\providecommand{\EsevenbBenignRoneFires}{20}
+\providecommand{\EsevenbBenignRfiveFires}{0}
+\providecommand{\EsevenbBenignDrops}{0}
+\providecommand{\EsevenbAttackTP}{100}
+\providecommand{\EsevenbAttackFN}{0}
+\providecommand{\EsevenbAttackRsixCatches}{100}
+\providecommand{\EsevenbTPR}{1.000}
+\providecommand{\EsevenbOverallPrecision}{1.000}
+\providecommand{\EsevenbOverallRecall}{1.000}
+\providecommand{\EsevenbOverallFOne}{1.000}
+\providecommand{\EsevenbOverrideTTLsec}{5}
+\providecommand{\EsevenbIntervalPzeroOne}{18011}
+% R1 fires on 20 of 100 benign updates over the 7.9 h window (interleaved
+% re-hits inside tau_R1); Gate A demotes all 20 to PASS, so these are
+% correct R1 fires, not arbiter false positives. R5 fires on 0 benign
+% (its counter is r2-gated).
+\providecommand{\EsevenbRoneFireOnBenignRate}{0.20}
+% System-level benign false-positive rate: 0 DROPs / 100 benign updates.
+\providecommand{\EsevenbSystemFPRate}{0.00}
+
+% --- E12b signed-manifest, switch-log recovery (2026-05-01)
+%     Original aggregate reported signed_mode.rate=0.0 because the
+%     aggregator scanned a per-trial JSONL slice instead of the
+%     human-readable controller log on the switch. The recovered
+%     numbers here come from intersecting the per-trial Phase-B marker
+%     window against /tmp/controller.log on decps@10.10.54.15. ---
+\providecommand{\EOneTwobsignedTotalTrials}{21}
+\providecommand{\EOneTwobsignedCoveredTrials}{15}
+\providecommand{\EOneTwobsignedMissingTrials}{6}
+\providecommand{\EOneTwobsignedSignedTrueCovered}{8}
+\providecommand{\EOneTwobsignedSignedFalseCovered}{0}
+\providecommand{\EOneTwobsignedRejectDetectedCovered}{8}
+\providecommand{\EOneTwobsignedSignedTrueRateCovered}{0.533}
+\providecommand{\EOneTwobsignedRejectRateCovered}{0.533}
+\providecommand{\EOneTwobsignedPollIntervalSec}{5}
+\providecommand{\EOneTwobsignedTamperWindowPreSec}{8}
+\providecommand{\EOneTwobsignedTamperWindowPostSec}{6}
+
+% --- E1' / E8' 200-BMS fleet replay
+%     (HW measurement 2026-05-01 from runs/m4/m4_aggregate.json,
+%     trial_01_restart, fresh controller state, RAT extended to
+%     10.0.2.10..209). The data-plane BMS index table caps at 64,
+%     so 64 of 200 BMSes get full Phase-1 coverage and 136 fall
+%     to fail-closed terminal_fire. Recall remains 1.000.) ---
+\providecommand{\EOnePrimeNbms}{200}
+\providecommand{\EOnePrimeIntendedEvents}{4841}
+\providecommand{\EOnePrimeDigestsObserved}{4743}
+\providecommand{\EOnePrimeDigestLossPct}{2.0}
+\providecommand{\EOnePrimeTP}{917}
+\providecommand{\EOnePrimeTN}{45}
+\providecommand{\EOnePrimeFP}{3781}
+\providecommand{\EOnePrimeFN}{0}
+\providecommand{\EOnePrimeNoDecision}{98}
+\providecommand{\EOnePrimePrecision}{0.195}
+\providecommand{\EOnePrimeRecall}{1.000}
+\providecommand{\EOnePrimeFOne}{0.327}
+\providecommand{\EEightPrimeNbms}{200}
+\providecommand{\EEightPrimeIntendedEvents}{7310}
+\providecommand{\EEightPrimeDigestsObserved}{7019}
+\providecommand{\EEightPrimeDigestLossPct}{4.0}
+\providecommand{\EEightPrimeTP}{2053}
+\providecommand{\EEightPrimeTN}{0}
+\providecommand{\EEightPrimeFP}{4966}
+\providecommand{\EEightPrimeFN}{0}
+\providecommand{\EEightPrimeNoDecision}{291}
+\providecommand{\EEightPrimePrecision}{0.292}
+\providecommand{\EEightPrimeRecall}{1.000}
+\providecommand{\EEightPrimeFOne}{0.453}
+\providecommand{\PfourBmsIndexCap}{64}
+
+% --- E12 benign rollout scenario-scope totals ---
+\providecommand{\EOneTwobenignrolloutScenarioTotal}{0}
+\providecommand{\EOneTwobenignrolloutScenarioPass}{0}
+\providecommand{\EOneTwobenignrolloutScenarioDrop}{0}
+\providecommand{\EOneTwobenignrolloutScenarioHoldOnly}{0}
+\providecommand{\EOneTwobenignrolloutScenarioFinalPassPct}{0.0}
+
+% --- E4 ablation (RAT-off) precision contrast ---
+% Gated-build re-run 2026-06-08 (B3): on the deployed gated build the ablation
+% collapses to 0.0 pp (precision stays 1.0; zero rat_disabled_ablation drops).
+% The 30.2/27.2/33.2 figures were the un-gated build only. CI is degenerate at 0.
+\providecommand{\EfourAblationPrecisionDiffPP}{0.0}
+\providecommand{\EfourAblationPrecisionDiffCIloPP}{0.0}
+\providecommand{\EfourAblationPrecisionDiffCIhiPP}{0.0}
+
+% --- E13 override-table capacity (src sweep) ---
+\providecommand{\EThirteenAggSrcSweepCounts}{1, 10, 32, 64, 100, 200}
+\providecommand{\EThirteenAggSrcSweepPeakActives}{1, 10, 32, 64, 100, 200}
+\providecommand{\EThirteenAggSrcSweepTotalDecisions}{12476}
+\providecommand{\EThirteenAggSrcSweepRejects}{0}
+\providecommand{\EThirteenAggSingleSrcPeakActive}{1}
+\providecommand{\EThirteenAggSingleSrcFiveTuples}{2051}
+\providecommand{\EThirteenAggRealisedPpsMax}{500}
+% --- T1.7 deployed 5-tuple override table (size 256). Source:
+%     runs/_agg/T1_7_multi_summary.json; key+size confirmed against deployed
+%     context.json (5-tuple: src_addr,dst_addr,dst_port,protocol,src_port). ---
+\providecommand{\TOneSevenTableSize}{256}
+\providecommand{\TOneSevenNSources}{200}
+\providecommand{\TOneSevenNTrials}{20}
+\providecommand{\TOneSevenTotalInserts}{4000}
+\providecommand{\TOneSevenRejects}{0}
+\providecommand{\TOneSevenRejectUBPct}{13.91}
+
+% --- M5 session-hash collision (N=10k) ---
+\providecommand{\MFiveHashBits}{17}
+\providecommand{\MFiveCollisionsTenThousand}{35}
+\providecommand{\MFiveRateTenThousandPct}{1.40}
+\providecommand{\MFiveTheoRateObsTenKPct}{1.88}
+
+% --- Symmetric E8 baseline: Suricata stateful-permissive on all 20 E8 trials
+%     (CPU work 2026-06-06 from runs/baseline_suricata_symmetric_2026-06-06/aggregate.json)
+%     PCAPs reconstructed from E8 ground_truth.json (same packet format as hardware runs).
+%     Source: experiments/suricata_symmetric.py
+%     This makes the comparison symmetric: Suricata and OTA-Shield both evaluated on
+%     the same 20 x 90 = 1800 event population. ---
+\providecommand{\EtenSymNTrials}{20}
+\providecommand{\EtenSymNEvents}{1800}
+\providecommand{\EtenSymTP}{1200}
+\providecommand{\EtenSymTN}{0}
+\providecommand{\EtenSymFP}{600}
+\providecommand{\EtenSymFN}{0}
+\providecommand{\EtenSymPrecision}{0.667}
+\providecommand{\EtenSymRecall}{1.000}
+\providecommand{\EtenSymFOne}{0.800}
+
+% --- Rule-of-three one-sided 95% upper bounds (pct) ---
+% I1/I3 NOTE: \RuleOfThreeFourHundred (0.75% = 3/400) was formerly cited for E19';
+%   E19' now reports genuine non-zero FP count so this bound no longer applies to E19'.
+%   \RuleOfThreeSixHundred (0.50% = 3/600) is used for E8 precision (FP=0/600 benign events)
+%   per the Clopper-Pearson one-sided 95% UB (identical to rule-of-three at 3 dec places).
+\providecommand{\RuleOfThreeFourHundred}{0.75}
+\providecommand{\RuleOfThreeFourFifty}{0.67}
+\providecommand{\RuleOfThreeSixHundred}{0.50}

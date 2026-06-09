@@ -1,0 +1,45 @@
+# E19': Stochastic rollback detection (IJCIP reviewer M3).
+#
+# The deterministic E19 config fires 20 identical trials with a fixed
+# (baseline_version=48, rollback_version=47) pair, so the reported
+# F1 CI collapses to [1.000, 1.000] — not a real measure of variance.
+# E19' randomizes three axes per trial so the reviewer's CI question has
+# a meaningful answer:
+#
+#   1. rollback delta ~ Uniform(9, 16)  -> rollback_version in [32, 39]
+#      (strictly below RAT e12-authorized-rollback.rollback_window.min=40,
+#      so every attack is genuinely unauthorized regardless of target BMS)
+#   2. legit:attack split ~ Uniform(0.3, 0.7) of the 2*n_bms budget
+#   3. inter-packet gap += Normal(0, 15 ms), clipped to [10, 200] ms
+#
+# Per-trial RNG seed = base_seed + trial_idx, driven by sweep.py.
+#
+# Prerequisites: same as E19 (R6 integrated, §6a/§6b arbiter, RAT manifest
+# authorizes AUTH_SRC over the fleet range, override table flushed).
+#
+# Figure of merit: bootstrap F1 CI across N trials (we target 20). Now
+# non-degenerate because each trial exercises a different arbiter surface.
+#
+# 2026-04-18 fix: delta bounds changed from [1,8] to [9,16] after root-
+# cause analysis of a 9/20 bad-trial cluster showed rollback_version in
+# [40,47] overlapped with RAT rollback_window.[40,47] for BMS .10-.19.
+# That scenario produced ~50% semantically-authorized operations
+# mislabeled as attacks. See scenarios.py note block for details.
+scenario: pack_rollback_e19_stochastic
+params:
+  n_bms: 20
+  baseline_version: 48
+  min_delta: 9
+  max_delta: 16
+  p_benign_low: 0.3
+  p_benign_high: 0.7
+  nominal_gap_s: 0.020
+  jitter_std_s: 0.015
+  jitter_min_s: 0.010
+  jitter_max_s: 0.200
+  base_seed: 42
+description: |
+  E19' stochastic rollback — 20 trials, trial_idx injected by sweep.py.
+  Replaces the zero-variance deterministic E19 CI with a real one so the
+  reviewer M3 concern is answerable. Expect wider CI than the
+  deterministic run; that width is the point.

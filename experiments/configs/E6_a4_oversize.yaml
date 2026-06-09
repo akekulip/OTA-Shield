@@ -1,0 +1,11 @@
+# E6: R4 oversize detection integrated into the experiment matrix.
+# One large MQTT session crossing the 2 MiB threshold.
+scenario: a4_oversize
+params:
+  dst_bms: 45
+  total_bytes: 2228224    # 2 MiB + 128 KiB
+  per_packet: 1400
+  sport: 54900
+description: |
+  ~1600 filler packets on one 5-tuple to trip R4. Verifies oversize
+  detection survives alongside the RAT-aware arbiter.

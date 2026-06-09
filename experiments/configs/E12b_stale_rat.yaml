@@ -1,0 +1,31 @@
+# E12b: Benign rollout with a deliberately STALE RAT.
+#
+# Re-runs the E12 workload but the controller is started with
+# controller/rat_stale_e12.json, whose valid_window_end is in 2025.
+# Every genuine rollout event therefore falls outside the active
+# window; Gate~A cannot match any authorized rollout entry, and the
+# arbiter must downgrade R1/R5 HOLDs to DROPs. Precision collapses
+# to approximately the E4 (rule-only) ablation level.
+#
+# This is the operational-robustness counterpoint to E12: it shows
+# the failure mode when the RAT lifecycle (signing / refresh / SIGHUP
+# reload) breaks down. Section 9.5 in the paper references this
+# result as "a fully stale RAT reduces precision to the E4 level."
+#
+# Requirements before running:
+#   1. Stop the running controller on the switch.
+#   2. Start the controller with
+#        --rat controller/rat_stale_e12.json
+#   3. Switch bf_switchd + P4 pipeline green (no reload).
+#   4. Override table empty (controller restart handles this).
+#
+# After the run, restart the controller with the normal rat_e12.json
+# to restore bench state.
+scenario: pack_benign_rollout_stress
+params:
+  seed: 1
+description: |
+  E12b benign rollout with stale RAT — identical workload to E12
+  but the controller's RAT valid_window has lapsed. Expected:
+  every R1/R5 fire becomes a DROP because no active RAT entry
+  matches the current timestamp. Runtime ~8 min/trial.

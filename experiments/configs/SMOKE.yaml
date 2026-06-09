@@ -1,0 +1,13 @@
+# SMOKE: fastest possible end-to-end sweep for wiring validation.
+# 3 authorized packets in ~0.3s; no rule fires (below R5 threshold).
+scenario: legit_rollout
+params:
+  n_bms: 3
+  start_bms: 0
+  size: 1024
+  version: 48
+  inter_packet_s: 0.1
+  sport_base: 58000
+description: |
+  Wiring smoke test — verifies scp/ssh/sudo/yaml/scapy path without
+  tripping any rule.

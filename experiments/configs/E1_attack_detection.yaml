@@ -1,0 +1,10 @@
+# E1: Per-rule attack detection rate.
+# Runs N attack instances per rule plus a baseline of legitimate rollouts.
+# Target: precision/recall mean ± 95% CI stable over trials.
+scenario: pack_attack_sweep
+params:
+  per_rule_n: 30
+  seed: 1
+description: |
+  30 R1-replay + 30 R2-unauth + baseline legit rollout, sport spacing
+  guarantees 5-tuple uniqueness so each event correlates to one decision.

@@ -1,0 +1,39 @@
+# E19: R6 rollback / replay detection.
+#
+# Two phases per trial:
+#   Phase 1 (LEGIT): 20 BMSes each receive firmware version 48 from
+#   AUTH_SRC. R6 register advances to 48 for each BMS.
+#   Phase 2 (ATTACK): same 20 BMSes receive firmware version 47 from
+#   the SAME AUTH_SRC. R2 must NOT fire (authorized source). Only R6
+#   is expected to fire.
+#
+# Prerequisites before running:
+#   1. bf_switchd built with rule_r6_rollback.p4 integrated
+#      (see plan/r6_integration_checklist.md). Pre-R6 builds will
+#      miss all 20 ATTACK events.
+#   2. Controller arbiter updated per checklist §6 (R6 added to
+#      terminal-rule list and rules_fired tuple) AND §6a (R1 demoted to
+#      conditional-terminal gated on RAT coverage). Without §6a, phase 2
+#      reports rules_fired=[R1, R6] and R6's causal contribution is
+#      unprovable — the bench will still show 20/20 DROP but the paper
+#      claim "R6 catches what R1/R2/R4 miss" cannot be made.
+#   3. RAT manifest authorises AUTH_SRC=10.0.1.10 across 10.0.2.10..29
+#      for the duration of the trial. This is controller-side only — it
+#      does NOT stop R1's P4 SALU from firing; it only reaches the
+#      arbiter, where §6a's RAT gate suppresses the R1 terminal-drop so
+#      the decision is attributed to R6 alone.
+#   4. Override table flushed at startup.
+#
+# Figure of merit: per-event R6 recall over the 20 ATTACK events in
+# phase 2. Target: recall = 1.0, zero false positives in phase 1.
+scenario: pack_rollback_e19
+params:
+  n_bms: 20
+  baseline_version: 48
+  rollback_version: 47
+  seed: 1
+description: |
+  E19 rollback detection — R6 catches same-source version downgrade
+  attacks that bypass R2 (source identity valid) and R4 (size valid).
+  Runtime ~3 min/trial (includes the 65 s R5-window clear between
+  phases).

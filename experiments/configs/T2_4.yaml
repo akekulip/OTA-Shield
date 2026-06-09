@@ -1,0 +1,71 @@
+# T2.4 — Brokered-MQTT topology (E20) + IP-only negative control (E20a).
+#
+# Source: EXPERIMENT_DESIGN.md §1 T2.4; Adversary §3 (broker attacks).
+#
+# OTA server 10.0.1.10 -> mosquitto broker 10.0.1.50:1883 (Vision) ->
+# Tofino -> BMS fleet 10.0.2.60..109. The broker collapses the source IP,
+# so the publisher-id-keyed RAT (E20) is scored against an IP-only RAT
+# (E20a, negative control which must collapse).
+#
+# 20 trials per scenario x 4 scenarios = 80 trials. 30% held-out,
+# deterministic-stratified by scenario (seed = 0xCAFE ^ 0xH0LD).
+
+schema_version: 1
+experiment_id: T2.4
+description: |
+  Brokered-MQTT topology. F1 macro under publisher-id-keyed RAT vs IP-only
+  RAT. Brokered F1 must stay within +/-0.02 of direct (non-brokered) F1;
+  the IP-only control's precision must collapse.
+scenarios:
+  - id: broker.mosquitto_relay_v2_0_22
+    kind: benign
+  - id: broker.aliasing
+    kind: attack
+  - id: broker.fanout
+    kind: attack
+  - id: broker.relay_confusion
+    kind: attack
+trial_count: 20           # per scenario; 4 scenarios -> 80 trials
+held_out_fraction: 0.30   # deterministic-stratified by scenario
+held_out_seed_xor: "0xH0LD"
+master_seed: "0xCAFE"
+declared_duration_s: 60
+n_publishes: 30
+primary_metric:
+  - f1_macro_pubid_rat
+  - f1_macro_ip_rat            # E20a negative control
+falsifier: |
+  Controller log shows > 5% fallback_ip_key=true events (publisher-id
+  keying silently degraded to IP keying).
+pass_criterion: |
+  Brokered F1 within +/-0.02 of direct F1 (publisher-id RAT works, TOST
+  delta=0.02); E20a precision collapses (negative control confirmed).
+wall_clock_estimate_h: 6     # plus 2 days code (done)
+statistical_test: |
+  paired cluster-bootstrap BCa (B=10000); TOST delta=0.02 vs direct
+  (non-brokered) F1.
+generator:
+  module: traffic_gen.broker_attack
+  scenario_class: BrokerRelayScenario
+broker:
+  host_ip: 10.0.1.50
+  port: 1883
+  prefer: mosquitto            # fall back to minimal scapy relay if absent
+  version: "2.0.22"
+preflight:
+  required_integrity_items: [1, 2, 3, 5, 6, 9, 10, 11, 12, 13]
+  scenarios_requiring_sanity_check:
+    - broker.mosquitto_relay_v2_0_22
+    - broker.aliasing
+    - broker.fanout
+    - broker.relay_confusion
+  hardware_assertions:
+    - "ports 8 and 11 UP at 25G RS-FEC"
+    - "bf_switchd PID alive"
+    - "controller PID alive (publisher-id-keyed RAT mode)"
+    - "RAT signature verified at trial start (item 12)"
+    - "broker-relay flag asserted on Vision tshark capture (item 13)"
+  dependencies:
+    - "mosquitto broker reachable at 10.0.1.50:1883 (or paho-mqtt for relay)"
+replay_mode: broker_relay
+post_wait_s: 15

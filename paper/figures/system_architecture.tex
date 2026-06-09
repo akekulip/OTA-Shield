@@ -1,0 +1,79 @@
+% OTA-Shield — System architecture (data plane / control plane), generic names.
+\begin{tikzpicture}[
+    font=\footnotesize,
+    >=Stealth,
+    box/.style  ={draw, rounded corners=3pt, minimum height=10mm,
+                  minimum width=32mm, align=center},
+    dpbox/.style={box, fill=blue!10},
+    cpbox/.style={box, fill=red!10},
+    iobox/.style={box, fill=gray!12},
+    file/.style ={draw, rounded corners=1pt, fill=yellow!18,
+                  font=\scriptsize, minimum height=7mm, minimum width=30mm,
+                  align=center},
+    arrow/.style={->, >=Stealth, thick, shorten >=0.5pt, shorten <=0.5pt},
+    darrow/.style={<->, >=Stealth, very thick},
+    lbl/.style  ={font=\scriptsize\itshape, text=black!75, inner sep=1.5pt,
+                  fill=white, fill opacity=0.92, text opacity=1,
+                  rounded corners=1pt}]
+
+  %--- Data plane (left) ------------------------------------------------
+  \node[dpbox] (parser) at (0,0)  {Ingress parser\\\scriptsize (Eth/IP/TCP/MQTT/OTA)};
+  \node[dpbox, below=6mm of parser] (rules)
+      {Rules R1, R2, R4, R5, R6\\\scriptsize (MAT + per-BMS registers,\\incl.\ R6 version high-water)};
+  \node[dpbox, below=6mm of rules] (policy)
+      {Policy engine\\\scriptsize PASS / HOLD / DROP};
+  \node[dpbox, below=6mm of policy] (override)
+      {Session override table\\\scriptsize (5-tuple-keyed; source-IP aggregation optional)};
+  \node[dpbox, below=6mm of override] (deparser)
+      {Deparser + digest\\\scriptsize (6 types, $\le$48 B each)};
+
+  \foreach \a/\b in {parser/rules, rules/policy, policy/override, override/deparser}
+    \draw[arrow] (\a) -- (\b);
+
+  \begin{scope}[on background layer]
+    \node[draw=blue!50, fill=blue!4, rounded corners=6pt,
+          fit=(parser)(deparser), inner sep=5mm,
+          label={[lbl]above:Data plane (Tofino programmable switch)}] (dp) {};
+  \end{scope}
+
+  %--- Control plane (right) --------------------------------------------
+  \node[cpbox, right=56mm of rules, yshift=-6mm]
+      (ctrl) {OTA-Shield controller\\\scriptsize (Python + BF Runtime)};
+  \node[cpbox, below=6mm of ctrl]
+      (rat)  {RAT-aware arbiter\\\scriptsize Gate~A (R1/R5) + Gate~B (R6)\\HOLD $\to$ PASS or DROP};
+  \node[file, below=7mm of rat]
+      (ratf) {Rollout-Authorization Table\\\scriptsize (policy manifest)};
+  \node[file, left=10mm of ratf]
+      (log)  {decision log\\\scriptsize (ground-truth record)};
+
+  \draw[arrow] (ctrl) -- (rat);
+  \draw[arrow] (ratf) -- (rat);
+  \draw[arrow] (rat.west)  -- node[lbl, above, align=center]
+      {install override\\5\,s fail-closed TTL} (override.east);
+  \draw[arrow] (rat) -- (log);
+
+  % gRPC digest channel (data plane -> controller)
+  \draw[darrow, red!60!black]
+      (deparser.east) -- ++(20mm,0) |- node[lbl, right, pos=0.20]
+      {gRPC digest stream} (ctrl.west);
+
+  % gRPC config channel (controller -> data plane)
+  \draw[arrow, dashed, blue!60]
+      (ctrl.west) -- ++(-14mm,0) |- node[lbl, left, pos=0.20]
+      {time tick + state reset} (rules.east);
+
+  \begin{scope}[on background layer]
+    \node[draw=red!50, fill=red!4, rounded corners=6pt,
+          fit=(ctrl)(ratf)(log), inner sep=5mm,
+          label={[lbl]above:Control plane (server CPU)}] (cp) {};
+  \end{scope}
+
+  %--- I/O hosts -----------------------------------------------------------
+  \node[iobox, above=18mm of parser, xshift=-34mm] (server)
+      {OTA update server};
+  \node[iobox, above=18mm of parser, xshift=34mm] (fleet)
+      {BMS fleet};
+
+  \draw[arrow, very thick] (server.south) to[out=-90, in=160] (parser.north west);
+  \draw[arrow, very thick] (parser.north east) to[out=20, in=-90] (fleet.south);
+\end{tikzpicture}

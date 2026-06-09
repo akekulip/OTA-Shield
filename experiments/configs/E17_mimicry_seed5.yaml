@@ -1,0 +1,4 @@
+scenario: pack_mimicry_e17
+params:
+  seed: 5
+description: T2.5 v2 smoke; sport_offset=500 (well inside 16-bit range)

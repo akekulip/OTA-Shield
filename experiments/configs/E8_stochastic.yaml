@@ -1,0 +1,11 @@
+# E8: Stochastic version of E1. Same logical scenario, but with random
+# BMS ordering, Poisson inter-arrivals, and ephemeral source ports.
+# Trials become genuinely independent → bootstrap CIs on F1 are meaningful.
+scenario: pack_stochastic_e1
+params:
+  per_rule_n: 30
+  seed: 0          # sweep.py overrides this per-trial when seed_per_trial=1
+  mean_iat_s: 0.10
+description: |
+  Mirrors E1 (30 baseline + 30 R1 replay + 30 R2 unauthorized) but with
+  realistic stochasticity. Use TRIALS=10+ for meaningful CIs.

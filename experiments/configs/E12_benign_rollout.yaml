@@ -1,0 +1,24 @@
+# E12: Benign operational rollout stress test.
+# Four realistic legitimate-rollout patterns run back-to-back. Each
+# trips R5 (fanout > 4) so the arbiter's RAT path is exercised. The
+# correct outcome for every event is PASS because all sources and
+# BMS targets match the operator's RAT manifest.
+#
+# This experiment directly answers the reviewer critique that the
+# evaluation proves feasibility better than operational robustness.
+# The figure of merit is PASS / HOLD-only / DROP rates per
+# sub-scenario (staged, emergency, migration, delayed).
+#
+# Requirements before running:
+#   1. Controller is up (RAT enabled) and has a RAT manifest that
+#      permits AUTH_SRC=10.0.1.10 AND 10.0.1.11 across all 50 BMSes
+#      in a wide active window (~1h) with max_concurrent_targets=50.
+#   2. Switch bf_switchd + P4 pipeline green.
+#   3. Override table empty (restart bf_switchd if accumulated).
+scenario: pack_benign_rollout_stress
+params:
+  seed: 1
+description: |
+  E12 benign operational rollout stress test — four sub-scenarios
+  (staged, emergency, source-migration, delayed). All events LEGIT;
+  any HOLD or DROP counts as FP. Runtime ~8 min/trial.

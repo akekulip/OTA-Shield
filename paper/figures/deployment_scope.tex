@@ -1,0 +1,62 @@
+% OTA-Shield — Deployment scope: where the detector can and cannot sit.
+% Three placement paths. (a) supported direct cleartext segment after TLS/VPN
+% termination; (b) unsupported brokered path (E20 source-IP collapse);
+% (c) unsupported encrypted/segmented path (TLS scope + E23 no reassembly).
+\begin{tikzpicture}[
+    font=\footnotesize, >=Stealth,
+    host/.style   ={draw, rounded corners=2pt, fill=gray!12,
+                    minimum height=8mm, minimum width=16mm, align=center},
+    mid/.style    ={draw, rounded corners=2pt, fill=yellow!16,
+                    minimum height=8mm, minimum width=18mm, align=center,
+                    font=\scriptsize},
+    shieldok/.style={draw=green!55!black, line width=0.8pt, rounded corners=2pt,
+                    fill=green!10, minimum height=8mm, minimum width=22mm,
+                    align=center, font=\scriptsize},
+    shieldno/.style={draw=red!60!black, line width=0.8pt, rounded corners=2pt,
+                    fill=red!8, minimum height=8mm, minimum width=22mm,
+                    align=center, font=\scriptsize},
+    okflow/.style ={->, thick, green!55!black},
+    noflow/.style ={->, thick, red!60!black, dashed},
+    plain/.style  ={->, thick, black!70},
+    seglbl/.style ={font=\scriptsize\itshape, text=black!70, inner sep=1.5pt,
+                    align=center, fill=white, fill opacity=0.9, text opacity=1},
+    verdict/.style={font=\scriptsize, align=left, anchor=west}]
+
+  \def\xsrv{0}      \def\xmid{3.6}   \def\xshd{7.8}   \def\xflt{10.8}
+  \def\ya{0}        \def\yb{-2.6}    \def\yc{-5.2}
+
+  %====================== (a) supported: direct cleartext ==================
+  \node[host]     (sa) at (\xsrv,\ya) {OTA\\server};
+  \node[mid]      (ma) at (\xmid,\ya) {TLS/VPN\\terminator};
+  \node[shieldok] (ha) at (\xshd,\ya) {\textbf{OTA-Shield}\\switch};
+  \node[host]     (fa) at (\xflt,\ya) {BMS\\fleet};
+  \draw[plain]  (sa) -- node[seglbl,above]{TLS} (ma);
+  \draw[okflow] (ma) -- node[seglbl,above]{cleartext\\MQTT} (ha);
+  \draw[okflow] (ha) -- (fa);
+  \node[anchor=north west, font=\scriptsize, text=green!45!black]
+    at ($(sa.south west)+(0,-0.30)$)
+    {\textbf{(a) Supported.} Parser recovers the OTA header; rules R1--R6 fire.};
+
+  %====================== (b) unsupported: brokered ========================
+  \node[host]     (sb) at (\xsrv,\yb) {OTA\\server};
+  \node[mid]      (mb) at (\xmid,\yb) {MQTT\\broker};
+  \node[shieldno] (hb) at (\xshd,\yb) {\textbf{OTA-Shield}\\switch};
+  \node[host]     (fb) at (\xflt,\yb) {BMS\\fleet};
+  \draw[plain]  (sb) -- (mb);
+  \draw[noflow] (mb) -- node[seglbl,above]{broker\\source IP} (hb);
+  \draw[noflow] (hb) -- (fb);
+  \node[anchor=north west, font=\scriptsize, text=red!55!black]
+    at ($(sb.south west)+(0,-0.30)$)
+    {\textbf{(b) Out of scope (E20).} Broker collapses publisher IPs; R2/R5 cannot separate them.};
+
+  %====================== (c) unsupported: encrypted / segmented ===========
+  \node[host]     (sc) at (\xsrv,\yc) {OTA\\server};
+  \node[shieldno] (hc) at (\xshd,\yc) {\textbf{OTA-Shield}\\switch};
+  \node[host]     (fc) at (\xflt,\yc) {BMS\\fleet};
+  \draw[noflow] (sc) -- node[seglbl,above]{encrypted tunnel \emph{or}\\TCP-segmented PUBLISH} (hc);
+  \draw[noflow] (hc) -- (fc);
+  \node[anchor=north west, font=\scriptsize, text=red!55!black]
+    at ($(sc.south west)+(0,-0.30)$)
+    {\textbf{(c) Out of scope (TLS/VPN scope, E23).} No plaintext header / no reassembly; rules cannot fire.};
+
+\end{tikzpicture}

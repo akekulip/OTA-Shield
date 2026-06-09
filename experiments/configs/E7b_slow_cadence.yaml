@@ -1,0 +1,35 @@
+# E7b: 8-hour slow-cadence overnight trace (IJCIP reviewer M8).
+#
+# Purpose: demonstrate that when per-BMS update cadence is strictly
+# above R1's threshold tau_R1 = 14400 s, R1 fires on zero legitimate
+# updates. Rollback attacks are interleaved so R2/R4/R5/R6 coverage
+# can still be measured against a legitimate-traffic floor.
+#
+# Produces paper macros:
+#   \EsevenbIntervalPzeroOne  — P0.1 of realized benign interval (s)
+#   \EsevenbRoneFPRate        — R1 false-trigger rate on benign events
+#
+# Paired with:
+#   experiments/scenarios_e7b.py     — plan builder
+#   experiments/run_e7b.py           — 8-h driver with resume+heartbeat
+#   experiments/aggregate_e7b.py     — E7b-specific metrics
+scenario: pack_e7b_slow_cadence
+params:
+  duration_sec: 28800          # 8 hours
+  n_bms: 50
+  tau_r1_sec: 14400            # policy threshold under test
+  attack_count: 100            # rollback attacks interleaved
+  seed: 0
+  baseline_version: 48
+  # Benign cadence = Uniform(18000, 22000) s, strictly > tau_r1_sec.
+  # Rollback delta per attack = Uniform(1, 6) below current per-BMS hwm.
+description: |
+  Each of n_bms batteries emits authorized OTA PUBLISHes at per-BMS
+  intervals drawn from Uniform(18000, 22000) seconds. Over an 8-h
+  trace each BMS typically fires 1-2 legitimate updates. R1 must fire
+  zero times on benign events by construction. attack_count rollback
+  attacks are interleaved at random epochs; they carry ota_version
+  strictly below the per-BMS high-water mark so R6 is the intended
+  trigger. The aggregator confirms that R1 false-trigger rate is
+  zero on benign events AND that per-attack detection is >=1-epsilon
+  under R2/R4/R5/R6 combined.

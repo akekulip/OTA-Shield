@@ -1,0 +1,14 @@
+# E4: Ablation — same scenario as E1, but controller must be launched with
+# --disable-rat so HOLD decisions never get RAT-relaxed to PASS.
+# Results are directly comparable to E1 (same scenario, different arbiter).
+#
+# REQUIRES manual controller restart with --disable-rat BEFORE running this.
+# See experiments/README.md § E4 for the launch command.
+scenario: pack_attack_sweep
+params:
+  per_rule_n: 30
+  seed: 1
+description: |
+  E1 scenario executed against a controller with RAT disabled. Measures
+  the contribution of the RAT-aware arbiter to precision on legitimate
+  fleet fanouts.

@@ -1,0 +1,58 @@
+# T2.5 / T2.5a / T2.5b — Mimicry per-strategy with CIs (E17b / E21).
+#
+# Source: EXPERIMENT_DESIGN.md §1 T2.5; Adversary §1 (5 mimicry generators).
+#
+# 30 trials per strategy (lifted from 3; required by Stats §1 to reach a
+# Wilson UB < 1% on 0/N cells). Five strategies = 150 strategy-trials.
+# T2.5b (fully-invisible-campaign rate) is scored over the SAME 30 trials
+# (one campaign per trial spanning all 5 strategies).
+
+schema_version: 1
+experiment_id: T2.5
+description: |
+  Per-strategy detection rate with Wilson 95% CI; cross-strategy
+  cluster-bootstrap BCa; Holm-Bonferroni across the 5 strategies;
+  fully-invisible-campaign rate (T2.5b) over 30 trials.
+strategies:
+  - mimicry_fanout_sub
+  - mimicry_fanout_three
+  - mimicry_combined
+  - mimicry_r4_deadzone
+  - mimicry_r1_late
+trial_count: 30           # per strategy AND number of campaigns for T2.5b
+held_out_fraction: 0.0
+master_seed: "0xCAFE"
+declared_duration_s: 280  # one pack_mimicry_e17 campaign (~4x 65s gaps)
+primary_metric:
+  - per_strategy_detection_rate
+  - cross_strategy_bca_f1
+  - fully_invisible_campaign_rate
+secondary_metric:
+  - time_to_first_drop_s          # T2.5 / E21
+  - bms_reached_before_detection  # E21
+falsifier: |
+  Abstract reports a single detection rate without per-strategy
+  decomposition.
+pass_criterion: |
+  Per-strategy CIs printed; abstract co-equal F1 0.996 + 13.6% mimicry
+  constraint satisfied.
+wall_clock_estimate_h: 30
+statistical_test: |
+  Wilson 95% per-strategy; cluster-bootstrap BCa (B=10000) on the
+  cross-strategy aggregate; Holm-Bonferroni across the 5 strategies.
+  Clopper-Pearson UB for any 0/N cell (zero-event class).
+generator:
+  module: experiments.scenarios
+  func: pack_mimicry_e17        # emits all 5 strategies per campaign
+preflight:
+  required_integrity_items: [1, 2, 3, 5, 6, 9, 10, 11, 12]
+  scenarios_requiring_sanity_check:
+    - mimicry_e17
+  hardware_assertions:
+    - "ports 8 and 11 UP at 25G RS-FEC"
+    - "bf_switchd PID alive"
+    - "controller PID alive"
+    - "RAT signature verified at trial start (item 12)"
+    - "per-trial SIGUSR1 reset confirmed (override / hold_armed_reg clear)"
+replay_mode: live
+post_wait_s: 10

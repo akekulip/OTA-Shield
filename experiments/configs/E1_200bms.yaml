@@ -1,0 +1,29 @@
+# E1': 200-BMS per-rule attack detection extrapolation (IJCIP reviewer M4).
+#
+# The physical testbed tops out at 50 BMS. The reviewer asked whether
+# detection behaviour changes at fleet-scale. We model the 200-BMS case
+# as the superposition of 200 independent Poisson arrival processes,
+# each at the per-BMS rate measured from the 50-host E1 + E7 long
+# baseline. See m4_extrapolation_notes.md for the honest framing:
+# rates, distributions, and rule behaviour on individual flows are
+# MEASURED; fleet size is EXTRAPOLATED.
+#
+# The generator writes a pcap that a later lab run can replay via
+# tcpreplay or the controller's replayer. Until then, the pcap + labels
+# pair is self-describing for the paper appendix.
+scenario: pack_e1_200bms_extrapolation
+module: experiments.scenarios_m4
+params:
+  seed: 0
+  n_bms: 200
+  # Per-BMS rate matches the E7 long-baseline steady-state. Overridden
+  # by sweep.py when paired with a rate-sweep study.
+  per_bms_rate_hz: 0.2
+  duration_s: 120.0
+  attack_fraction: 0.20
+output:
+  out_dir: "runs/m4"
+description: |
+  Expected event count ≈ 200 * 0.2 * 120 = 4800 events. 80% LEGIT, 20%
+  ATTACK (split evenly between R1 replay and R2 unauthorized). Addresses
+  10.0.2.60..209 are synthetic; the paper treats them as a modelled fleet.

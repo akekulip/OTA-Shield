@@ -1,0 +1,35 @@
+% Auto-generated for M7 Suricata+RAT arbiter wrapper baseline (variant vi).
+% Source: runs/baseline_suricata_stateful_permissive/suricata_rat_perm_comparison.json
+% Companion sources for inline comparison (already in E10_stateful_summary.json):
+%   variant (iii) suricata_stateful_permissive (alone)
+%   variant (vii) ota_shield (Fig 6 E1 reference)
+% Namespace: EtenSuricataArbiter* (variant vi); EtenSuricataPermissive* (variant iii anchor).
+% Innovation framing: arbiter wrapper closes precision gap; dataplane closes recall gap.
+
+% --- Variant (vi): Suricata-stateful-permissive + RAT arbiter ---
+\newcommand{\EtenSuricataArbiterEvents}{90}
+\newcommand{\EtenSuricataArbiterTP}{30}
+\newcommand{\EtenSuricataArbiterFP}{0}
+\newcommand{\EtenSuricataArbiterFN}{30}
+\newcommand{\EtenSuricataArbiterTN}{30}
+\newcommand{\EtenSuricataArbiterPrecision}{1.0000}
+\newcommand{\EtenSuricataArbiterRecall}{0.5000}
+\newcommand{\EtenSuricataArbiterAccuracy}{0.6667}
+
+% --- Variant (iii) baseline anchor: Suricata-stateful-permissive alone ---
+\newcommand{\EtenSuricataPermissiveTP}{60}
+\newcommand{\EtenSuricataPermissiveFP}{30}
+\newcommand{\EtenSuricataPermissiveFN}{0}
+\newcommand{\EtenSuricataPermissiveTN}{0}
+\newcommand{\EtenSuricataPermissivePrecision}{0.6667}
+\newcommand{\EtenSuricataPermissiveRecall}{1.0000}
+\newcommand{\EtenSuricataPermissiveAccuracy}{0.6667}
+
+% --- Innovation-decomposition deltas (precision gap vs recall gap) ---
+\newcommand{\EtenArbiterPrecisionGain}{0.3333}% 1.0000 - 0.6667
+\newcommand{\EtenArbiterRecallLoss}{0.5000}%   1.0000 - 0.5000
+\newcommand{\EtenDataplaneRecallGain}{0.5000}% OTA-Shield closes the residual recall gap
+
+% --- OTA-Shield reference (already in main numbers.tex; restated here for §6.6 self-containment) ---
+\newcommand{\EtenOtaShieldPrecision}{1.0000}
+\newcommand{\EtenOtaShieldRecall}{1.0000}

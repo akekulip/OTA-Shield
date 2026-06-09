@@ -1,0 +1,46 @@
+% OTA-Shield — Testbed topology (generic names only).
+\begin{tikzpicture}[
+    font=\footnotesize,
+    >=Stealth,
+    host/.style   ={draw, rounded corners=4pt, minimum height=16mm,
+                    minimum width=34mm, align=center, fill=gray!8},
+    switch/.style ={draw, double, rounded corners=4pt, minimum height=18mm,
+                    minimum width=44mm, align=center, fill=blue!10},
+    lbl/.style    ={font=\scriptsize, text=black!80, inner sep=1.5pt,
+                    fill=white, fill opacity=0.92, text opacity=1,
+                    rounded corners=1pt},
+    link/.style   ={very thick, >=Stealth},
+    bidir/.style  ={link, <->}]
+
+  %--- Hosts ---------------------------------------------------------------
+  \node[host] (server) at (-58mm, 0)
+      {\textbf{OTA update server}\\
+       MQTT publisher\\
+       firmware images};
+
+  \node[switch] (tofino) at (0, 0)
+      {\textbf{Programmable switch}\\
+       (\textsc{OTA-Shield} pipeline\\
+       + controller)};
+
+  \node[host] (fleet) at (58mm, 0)
+      {\textbf{BMS fleet}\\
+       50 battery modules\\
+       (emulated endpoints)};
+
+  %--- Data links ----------------------------------------------------------
+  \draw[bidir] (server.east) -- node[lbl, above]
+      {25\,Gb/s} node[lbl, below]{ingress port} (tofino.west);
+  \draw[bidir] (tofino.east) -- node[lbl, above]
+      {25\,Gb/s} node[lbl, below]{egress port} (fleet.west);
+
+  %--- Traffic direction annotation ----------------------------------------
+  \draw[->, thick, red!55!black, dashed]
+      ([yshift=14mm]server.north east) -- node[lbl, above]
+      {MQTT PUBLISH (TCP/1883)} ([yshift=14mm]fleet.north west);
+  \draw[->, thick, blue!55!black, dashed]
+      ([yshift=2mm]tofino.north) -- ++(0,7mm)
+      node[lbl, right, align=left, xshift=1mm, yshift=-2mm]
+      {digest stream\\to controller};
+
+\end{tikzpicture}

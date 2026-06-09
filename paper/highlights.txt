@@ -1,0 +1,7 @@
+Highlights — OTA-Shield
+
+- Fleet-level coordinated-attack detection for BESS OTA updates
+- RAT-aware control-plane arbitration separates attacks from rollouts
+- Arbiter contributes 30.2 precision points over rule-only detection
+- Median end-to-end latency of 29.5 ms on commercial switch hardware
+- Held-out mimicry study reports each rule's measured blind zone

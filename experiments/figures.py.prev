@@ -1,0 +1,625 @@
+"""Publication-grade figures for OTA-Shield.
+
+Design principles:
+  * Separate PRIMARY experiments (clean, peer-reviewable) from METHODOLOGY
+    ABLATION experiments (kept for § Methodology discussion of how
+    measurement choices affect results). NEVER pool them into a headline
+    figure.
+  * Single-column width 3.5 in, double-column 7.0 in. PDF uses embedded
+    Type-1 fonts (fonttype=42) for LaTeX compatibility.
+  * Serif (Times) text, 8-9 pt, thin grid, ColorBrewer-safe palette.
+  * Each figure function takes its own input and writes exactly ONE PDF +
+    ONE PNG. No side effects.
+
+Primary allowlist is derived from `experiments/configs/*.yaml` — anything
+outside it (E1_nostate_reset, E1_scenario_bug, SMOKE, …) is treated as
+supporting material, not headline.
+"""
+from __future__ import annotations
+import argparse, json, math, re
+from pathlib import Path
+
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+import numpy as np
+
+# ---------- Publication style ----------
+STYLE = {
+    "font.family":       "serif",
+    "font.serif":        ["Times New Roman", "Nimbus Roman No9 L",
+                          "Liberation Serif", "DejaVu Serif"],
+    "font.size":          10,
+    "axes.labelsize":    10,
+    "axes.titlesize":    10,
+    "xtick.labelsize":    9,
+    "ytick.labelsize":    9,
+    "legend.fontsize":    9,
+    "legend.frameon":     False,
+    "axes.grid":          True,
+    "grid.alpha":         0.25,
+    "grid.linestyle":     ":",
+    "grid.linewidth":     0.4,
+    "axes.linewidth":     0.6,
+    "xtick.major.width":  0.6,
+    "ytick.major.width":  0.6,
+    "lines.linewidth":    1.1,
+    "lines.markersize":   3.2,
+    "figure.dpi":         200,
+    "savefig.dpi":        400,
+    "savefig.bbox":       "tight",
+    "savefig.pad_inches": 0.02,
+    "pdf.fonttype":       42,
+    "ps.fonttype":        42,
+    "axes.spines.top":    False,
+    "axes.spines.right":  False,
+}
+mpl.rcParams.update(STYLE)
+
+# ColorBrewer Set2 — qualitative, print-safe
+C_TP    = "#1b9e77"   # dark teal (correct attack caught)
+C_TN    = "#7570b3"   # muted purple (correct legit passed)
+C_FP    = "#d95f02"   # orange-red (false alarm)
+C_FN    = "#e7298a"   # magenta (missed attack)
+C_NEUTRAL = "#66a5d7"
+
+COL_W  = 3.5
+COL2_W = 7.0
+
+
+def _save(fig, out: Path) -> None:
+    out.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out.with_suffix(".pdf"))
+    fig.savefig(out.with_suffix(".png"))
+    plt.close(fig)
+
+
+# ---------- Data helpers ----------
+
+def load_agg(agg_dir: Path) -> dict[str, dict]:
+    return {p.stem: json.loads(p.read_text())
+            for p in sorted(agg_dir.glob("*.json"))}
+
+
+def primary_keys(agg: dict, configs_dir: Path) -> list[str]:
+    """Experiments with a matching YAML in configs/ — everything else is
+    supporting (methodology ablation, smoke, etc.). Also excludes configs
+    whose stem contains 'ablation' or 'SMOKE' from the headline pool; those
+    belong in dedicated ablation figures."""
+    allow = {p.stem for p in configs_dir.glob("*.yaml")}
+    def is_primary(k: str) -> bool:
+        if k not in allow:
+            return False
+        lowered = k.lower()
+        if "ablation" in lowered or "smoke" in lowered:
+            return False
+        return True
+    return [k for k in sorted(agg) if is_primary(k)]
+
+
+# ---------- Figures ----------
+
+def fig_confusion_matrix(aggs: dict, out: Path,
+                          title: str = "Confusion matrix",
+                          primary_only: bool = True) -> None:
+    """Pooled confusion matrix across the primary scoring experiments
+    only (E1, E6, E8, E9) by default. E4 is an ablation designed to
+    produce FP, so including it pollutes the pooled matrix and
+    visually contradicts the headline precision number."""
+    if primary_only:
+        primary_keys = {"E1_attack_detection", "E6_a4_oversize",
+                         "E8_stochastic", "E9_evasion_r4"}
+        use = {k: v for k, v in aggs.items() if k in primary_keys}
+    else:
+        use = aggs
+    tp = tn = fp = fn = 0
+    for a in use.values():
+        for t in a["per_trial_raw"]:
+            tp += t["tp"]; tn += t["tn"]; fp += t["fp"]; fn += t["fn"]
+    M = np.array([[tp, fn], [fp, tn]])
+    total = max(M.sum(), 1)
+    quadrant = np.array([["TP", "FN"], ["FP", "TN"]])
+
+    fig, ax = plt.subplots(figsize=(COL_W, COL_W))
+    ax.imshow(M, cmap="Blues", aspect="equal", vmin=0,
+              vmax=max(M.max(), 1))
+    for i in range(2):
+        for j in range(2):
+            n = int(M[i, j])
+            pct = 100 * n / total
+            c = "white" if M[i, j] / (M.max() or 1) > 0.55 else "black"
+            ax.text(j, i, f"{quadrant[i,j]}\n{n}\n{pct:.1f}%",
+                    ha="center", va="center", color=c, fontsize=9,
+                    fontweight="bold")
+    ax.set_xticks([0, 1]); ax.set_yticks([0, 1])
+    ax.set_xticklabels(["attack", "legit"])
+    ax.set_yticklabels(["attack", "legit"])
+    ax.set_xlabel("Predicted"); ax.set_ylabel("Actual")
+    ax.set_title(title, pad=6)
+    ax.grid(False)
+    for spine in ax.spines.values():
+        spine.set_visible(True)
+        spine.set_linewidth(0.4)
+    fig.tight_layout()
+    _save(fig, out)
+
+
+def fig_per_experiment_bars(aggs: dict, out: Path) -> None:
+    """Precision, Recall, F1 per primary experiment with 95 % CI bars.
+    Legend placed OUTSIDE the axes so it cannot overlap the bars."""
+    # Skip experiments with no positives (all NaN) — they carry no info
+    # in this view and only clutter the figure.
+    filtered = {e: a for e, a in aggs.items()
+                if a.get("aggregate") and
+                not math.isnan(a["aggregate"]["f1"]["mean"])}
+    exps = list(filtered)
+    if not exps:
+        return
+    metrics = [("precision", "Precision"), ("recall", "Recall"),
+               ("f1", "F1")]
+    x = np.arange(len(exps))
+    width = 0.26
+    colors = ["#4e79a7", "#59a14f", "#b07aa1"]
+
+    fig, ax = plt.subplots(figsize=(COL2_W, 2.6))
+    bar_centers = {}  # {(metric, exp): (x, val)} for label annotation
+    for i, (key, label) in enumerate(metrics):
+        vals = [filtered[e]["aggregate"][key]["mean"] for e in exps]
+        lo   = [max(0, filtered[e]["aggregate"][key]["mean"] -
+                    filtered[e]["aggregate"][key]["ci_lo"])
+                for e in exps]
+        hi   = [max(0, filtered[e]["aggregate"][key]["ci_hi"] -
+                    filtered[e]["aggregate"][key]["mean"])
+                for e in exps]
+        vals_plot = [0 if math.isnan(v) else v for v in vals]
+        xi = x + (i - 1) * width
+        ax.bar(xi, vals_plot, width,
+               yerr=[lo, hi], capsize=2.5, color=colors[i],
+               edgecolor="black", linewidth=0.3, label=label)
+        for xpos, v in zip(xi, vals_plot):
+            bar_centers[(key, xpos)] = v
+    # On-bar numeric labels (3 decimals) placed above the error whisker.
+    for (key, xpos), v in bar_centers.items():
+        ax.text(xpos, 1.02, f"{v:.3f}", ha="center", va="bottom",
+                fontsize=6, rotation=0, color="#222")
+    labels = []
+    for e in exps:
+        short = e.replace("_", "\n", 1)
+        labels.append(short)
+    ax.set_xticks(x)
+    ax.set_xticklabels(labels, fontsize=8)
+    ax.set_ylabel("Score")
+    ax.set_ylim(0, 1.12)
+    ax.legend(loc="upper left", bbox_to_anchor=(1.02, 1.0),
+              borderaxespad=0, handlelength=1.4, fontsize=8)
+    fig.tight_layout()
+    _save(fig, out)
+
+
+def fig_detection_latency(latencies: list[float], out: Path,
+                            p95_override: float | None = None,
+                            med_override: float | None = None) -> None:
+    """Histogram + CDF, auto-zoomed to the 1--99% range.
+    If p95_override (ms) / med_override (ms) are provided (typically
+    from the canonical aggregate JSON), they are shown on the plot
+    so caption and label agree exactly."""
+    lat_ms = np.array(sorted(l * 1000 for l in latencies))
+    if lat_ms.size == 0:
+        return
+    # Tighter zoom: use 95th percentile to cut empty space that the
+    # long right tail would otherwise leave behind.
+    lo, hi = np.percentile(lat_ms, [1, 95])
+    span = max(hi - lo, 1.0)
+    x_lo = max(0.0, lo - 0.02 * span)
+    x_hi = hi + 0.05 * span
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(COL2_W, 2.8),
+                                    gridspec_kw={"wspace": 0.32})
+
+    in_range = lat_ms[(lat_ms >= x_lo) & (lat_ms <= x_hi)]
+    bins = np.linspace(x_lo, x_hi, 30)
+    ax1.hist(in_range, bins=bins, color=C_NEUTRAL,
+             edgecolor="black", linewidth=0.3)
+    ax1.set_xlabel("Detection latency (ms)")
+    ax1.set_ylabel("# attacks")
+    ax1.set_xlim(x_lo, x_hi)
+    ax1.set_title("(a) Histogram", loc="left", pad=4)
+    med = med_override if med_override is not None \
+          else float(np.median(lat_ms))
+    ax1.axvline(med, color="black", linestyle="--", lw=0.7)
+    ax1.text(0.04, 0.92, f"median = {med:.1f} ms",
+             transform=ax1.transAxes, fontsize=9, va="top",
+             bbox=dict(boxstyle="round,pad=0.2", fc="white",
+                       ec="none", alpha=0.85))
+
+    cdf = np.arange(1, lat_ms.size + 1) / lat_ms.size
+    ax2.plot(lat_ms, cdf, color=C_NEUTRAL, lw=1.2)
+    ax2.set_xlabel("Detection latency (ms)")
+    ax2.set_ylabel("CDF")
+    ax2.set_xlim(x_lo, x_hi)
+    ax2.set_ylim(0, 1.02)
+    ax2.axhline(0.95, color="#888", lw=0.4, linestyle=":")
+    p95 = p95_override if p95_override is not None \
+          else float(np.percentile(lat_ms, 95))
+    ax2.axvline(p95, color="black", linestyle="--", lw=0.7)
+    ax2.text(0.04, 0.92, f"p95 = {p95:.1f} ms",
+             transform=ax2.transAxes, fontsize=9, va="top",
+             bbox=dict(boxstyle="round,pad=0.2", fc="white",
+                       ec="none", alpha=0.85))
+    ax2.set_title("(b) CDF", loc="left", pad=4)
+
+    _save(fig, out)
+
+
+def fig_throughput(csv_path: Path, out: Path) -> None:
+    """E11 throughput sweep: offered vs observed pps, with loss annotation."""
+    if not csv_path.exists():
+        return
+    lines = csv_path.read_text().strip().splitlines()
+    if len(lines) < 2:
+        return
+    rates, sent_vals, obs_vals, loss_vals = [], [], [], []
+    for ln in lines[1:]:
+        parts = ln.split(",")
+        if len(parts) < 4:
+            continue
+        try:
+            rates.append(int(parts[0]))
+            sent_vals.append(int(parts[1]))
+            obs_vals.append(int(parts[2]))
+            loss_vals.append(float(parts[3]))
+        except ValueError:
+            continue
+    if not rates:
+        return
+
+    fig, ax = plt.subplots(figsize=(COL_W, 2.6))
+    x = np.arange(len(rates))
+    width = 0.38
+    ax.bar(x - width/2, sent_vals, width, label="Sent",
+            color="#4e79a7", edgecolor="black", linewidth=0.3)
+    ax.bar(x + width/2, obs_vals, width, label="Observed",
+            color="#59a14f", edgecolor="black", linewidth=0.3)
+    ax.set_xticks(x)
+    ax.set_xticklabels([f"{r}" for r in rates])
+    ax.set_xlabel("Target offered rate (pps)")
+    ax.set_ylabel("Packets")
+    ax.set_ylim(0, max(sent_vals) * 1.12)
+    ax.legend(loc="upper left", fontsize=9, handlelength=1.2,
+              frameon=False)
+    # Per-rate loss numbers belong in the caption, not the plot.
+    fig.tight_layout()
+    _save(fig, out)
+
+
+def fig_benign_rollout(e12_agg: dict, out: Path) -> None:
+    """E12: PASS / HOLD-only / DROP rates per benign sub-scenario.
+    Input `e12_agg` must be the aggregate JSON for E12_benign_rollout,
+    which records per-scenario outcome counts in a `scenario_outcomes`
+    block."""
+    scen_out = e12_agg.get("scenario_outcomes") or {}
+    if not scen_out:
+        return
+    labels = list(scen_out.keys())
+    x = np.arange(len(labels))
+    pass_counts = [scen_out[k].get("pass", 0) for k in labels]
+    hold_counts = [scen_out[k].get("hold_only", 0) for k in labels]
+    drop_counts = [scen_out[k].get("drop", 0) for k in labels]
+    totals = [max(1, p + h + d) for p, h, d in
+              zip(pass_counts, hold_counts, drop_counts)]
+    p_pct = [100 * p / t for p, t in zip(pass_counts, totals)]
+    h_pct = [100 * h / t for h, t in zip(hold_counts, totals)]
+    d_pct = [100 * d / t for d, t in zip(drop_counts, totals)]
+
+    fig, ax = plt.subplots(figsize=(COL2_W, 2.4))
+    ax.bar(x, p_pct, color="#1b9e77", edgecolor="black",
+           linewidth=0.3, label="PASS")
+    ax.bar(x, h_pct, bottom=p_pct, color="#e6ab02",
+           edgecolor="black", linewidth=0.3, label="HOLD-only")
+    ax.bar(x, d_pct, bottom=[p + h for p, h in zip(p_pct, h_pct)],
+           color="#d95f02", edgecolor="black", linewidth=0.3,
+           label="DROP")
+    pretty = {
+        "benign_staged": "staged\nrollout",
+        "benign_emergency": "emergency\npatch",
+        "benign_migration_src1": "source\nmigration\n(src1)",
+        "benign_migration_src2": "source\nmigration\n(src2)",
+        "benign_delayed": "delayed\nwindow",
+    }
+    ax.set_xticks(x)
+    ax.set_xticklabels([pretty.get(k, k) for k in labels],
+                       fontsize=7)
+    ax.set_ylim(0, 105)
+    ax.set_ylabel("% of events")
+    ax.legend(loc="upper left", bbox_to_anchor=(1.02, 1.0),
+              borderaxespad=0, fontsize=7, handlelength=1.4)
+    fig.tight_layout()
+    _save(fig, out)
+
+
+def fig_override_capacity(curve_csv: Path, summary_csv: Path,
+                            out: Path, table_cap: int = 1024) -> None:
+    """E13: active override count over time per offered rate. Shows
+    installs-vs-TTL race; saturation at the table cap would appear
+    as a plateau at 1024."""
+    if not curve_csv.exists():
+        return
+    lines = curve_csv.read_text().strip().splitlines()[1:]
+    series: dict[int, list[tuple[float, int]]] = {}
+    for ln in lines:
+        try:
+            rate, t_rel, n_active, _, _ = ln.split(",")
+            r = int(rate); t = float(t_rel); n = int(n_active)
+            series.setdefault(r, []).append((t, n))
+        except (ValueError, TypeError):
+            continue
+    if not series:
+        return
+
+    fig, ax = plt.subplots(figsize=(COL2_W, 2.6))
+    palette = ["#4e79a7", "#59a14f", "#b07aa1", "#e6ab02",
+               "#d95f02", "#1b9e77"]
+    for i, (rate, pts) in enumerate(sorted(series.items())):
+        pts.sort()
+        xs = [p[0] for p in pts]; ys = [p[1] for p in pts]
+        ax.plot(xs, ys, color=palette[i % len(palette)],
+                lw=1.1, label=f"{rate} pps")
+    ax.axhline(table_cap, color="#888", lw=0.6, linestyle="--")
+    ax.text(0.02, table_cap + 20, f"table cap = {table_cap}",
+            transform=ax.get_yaxis_transform(), fontsize=7,
+            color="#666")
+    ax.set_xlabel("Time within rate window (s)")
+    ax.set_ylabel("Active session overrides")
+    ax.legend(loc="upper left", bbox_to_anchor=(1.02, 1.0),
+              borderaxespad=0, fontsize=7, handlelength=1.4,
+              title="Offered rate")
+    fig.tight_layout()
+    _save(fig, out)
+
+
+def fig_suricata_vs_ours(suricata: dict, ours_agg: dict, out: Path) -> None:
+    """E10: side-by-side recall/accuracy of Suricata vs OTA-Shield."""
+    our_r = ours_agg["aggregate"]["recall"]["mean"]
+    our_a = ours_agg["aggregate"]["accuracy"]["mean"]
+    sur_r = float(suricata.get("recall") or 0)
+    sur_a = float(suricata.get("accuracy") or 0)
+
+    labels = ["Recall", "Accuracy"]
+    ours = [our_r, our_a]
+    sur  = [sur_r, sur_a]
+    x = np.arange(len(labels))
+    width = 0.36
+
+    fig, ax = plt.subplots(figsize=(COL_W, 2.2))
+    ax.bar(x - width/2, ours, width, label="OTA-Shield",
+            color="#1b9e77", edgecolor="black", linewidth=0.3)
+    ax.bar(x + width/2, sur, width, label="Suricata (ICS rules)",
+            color="#d95f02", edgecolor="black", linewidth=0.3)
+    ax.set_xticks(x); ax.set_xticklabels(labels)
+    ax.set_ylim(0, 1.05)
+    ax.set_ylabel("Score")
+    ax.legend(loc="upper left", bbox_to_anchor=(1.02, 1.0),
+              borderaxespad=0, fontsize=8, handlelength=1.4)
+    for xi, (o, s) in enumerate(zip(ours, sur)):
+        ax.text(xi - width/2, o + 0.02, f"{o:.2f}", ha="center", fontsize=7)
+        ax.text(xi + width/2, s + 0.02, f"{s:.2f}", ha="center", fontsize=7)
+    fig.tight_layout()
+    _save(fig, out)
+
+
+def fig_rat_ablation(all_aggs: dict, out: Path) -> None:
+    """E1 vs E4: show the RAT arbiter's contribution to precision."""
+    pairs = [("E1_attack_detection", "RAT enabled"),
+             ("E4_ablation",          "RAT disabled")]
+    pairs = [(k, lbl) for k, lbl in pairs if k in all_aggs]
+    if len(pairs) < 2:
+        return
+
+    metrics = [("precision", "Precision"), ("recall", "Recall"),
+               ("f1", "F1")]
+    x = np.arange(len(metrics))
+    width = 0.35
+    palette = ["#1b9e77", "#d95f02"]
+
+    fig, ax = plt.subplots(figsize=(COL_W, 2.4))
+    for i, (exp, lbl) in enumerate(pairs):
+        vals = [all_aggs[exp]["aggregate"][k]["mean"] for k, _ in metrics]
+        lo   = [all_aggs[exp]["aggregate"][k]["mean"] -
+                all_aggs[exp]["aggregate"][k]["ci_lo"] for k, _ in metrics]
+        hi   = [all_aggs[exp]["aggregate"][k]["ci_hi"] -
+                all_aggs[exp]["aggregate"][k]["mean"] for k, _ in metrics]
+        vals = [0 if math.isnan(v) else v for v in vals]
+        ax.bar(x + (i - 0.5) * width, vals, width,
+               yerr=[[max(0, l) for l in lo], [max(0, h) for h in hi]],
+               capsize=3, color=palette[i], edgecolor="black",
+               linewidth=0.3, label=lbl)
+    ax.set_xticks(x)
+    ax.set_xticklabels([m[1] for m in metrics])
+    ax.set_ylabel("Score")
+    ax.set_ylim(0, 1.18)
+    # Legend above the plot, outside the bar area.
+    ax.legend(loc="lower center", bbox_to_anchor=(0.5, 1.02),
+              ncol=2, handlelength=1.2, frameon=False)
+    fig.tight_layout()
+    _save(fig, out)
+
+
+def fig_methodology_ablation(all_aggs: dict, primary: list[str],
+                              out: Path) -> None:
+    """Compare headline experiment against its methodology ablations.
+    Expects naming convention: `E1_attack_detection` (primary),
+    `E1_nostate_reset`, `E1_scenario_bug` (ablations)."""
+    base = "E1_attack_detection"
+    variants = {
+        "E1_nostate_reset":  "no state reset",
+        "E1_scenario_bug":   "scenario bug",
+        base:                "clean (ours)",
+    }
+    order = ["E1_nostate_reset", "E1_scenario_bug", base]
+    order = [k for k in order if k in all_aggs]
+    if not order:
+        return
+
+    metrics = [("precision", "Precision"), ("recall", "Recall"),
+               ("f1", "F1")]
+    x = np.arange(len(metrics))
+    width = 0.26
+    palette = ["#d95f02", "#b07aa1", "#1b9e77"]
+
+    fig, ax = plt.subplots(figsize=(COL_W * 1.35, 2.2))
+    for i, exp in enumerate(order):
+        vals = [all_aggs[exp]["aggregate"][k]["mean"] for k, _ in metrics]
+        lo   = [all_aggs[exp]["aggregate"][k]["mean"] -
+                all_aggs[exp]["aggregate"][k]["ci_lo"] for k, _ in metrics]
+        hi   = [all_aggs[exp]["aggregate"][k]["ci_hi"] -
+                all_aggs[exp]["aggregate"][k]["mean"] for k, _ in metrics]
+        vals = [0 if math.isnan(v) else v for v in vals]
+        ax.bar(x + (i - 1) * width, vals, width,
+               yerr=[[max(0, l) for l in lo], [max(0, h) for h in hi]],
+               capsize=2.5, color=palette[i], edgecolor="black",
+               linewidth=0.3, label=variants[exp])
+    ax.set_xticks(x)
+    ax.set_xticklabels([m[1] for m in metrics])
+    ax.set_ylabel("Score")
+    ax.set_ylim(0, 1.08)
+    ax.legend(loc="lower right", ncol=1, handlelength=1.2)
+    ax.set_title("Methodology ablation (E1)", loc="left", pad=4)
+    _save(fig, out)
+
+
+# ---------- Tables ----------
+
+def table_summary_latex(aggs: dict, out: Path) -> None:
+    metrics = ["precision", "recall", "f1", "accuracy"]
+    aggs = {e: a for e, a in aggs.items() if a.get("aggregate")}
+    best = {m: max((aggs[e]["aggregate"][m]["mean"] for e in aggs
+                    if not math.isnan(aggs[e]["aggregate"][m]["mean"])),
+                   default=0)
+            for m in metrics}
+    lines = []
+    lines.append(r"% auto-generated by experiments/figures.py — do not edit")
+    lines.append(r"\begin{tabular}{l" + "c" * len(metrics) + r"}")
+    lines.append(r"\toprule")
+    lines.append("Experiment & " + " & ".join(m.capitalize() for m in metrics)
+                 + r" \\")
+    lines.append(r"\midrule")
+    for e in aggs:
+        cells = [e.replace("_", r"\_")]
+        for m in metrics:
+            v = aggs[e]["aggregate"][m]["mean"]
+            ci_lo = aggs[e]["aggregate"][m]["ci_lo"]
+            ci_hi = aggs[e]["aggregate"][m]["ci_hi"]
+            if math.isnan(v):
+                cells.append("--")
+            else:
+                s = f"{v:.3f}"
+                if abs(v - best[m]) < 1e-9:
+                    s = r"\textbf{" + s + "}"
+                if not math.isnan(ci_lo) and not math.isnan(ci_hi):
+                    s += f" \\tiny[{ci_lo:.3f}, {ci_hi:.3f}]"
+                cells.append(s)
+        lines.append(" & ".join(cells) + r" \\")
+    lines.append(r"\bottomrule")
+    lines.append(r"\end{tabular}")
+    out.write_text("\n".join(lines))
+
+
+# ---------- Driver ----------
+
+def main() -> None:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--agg-dir", default="runs/experiments/_agg", type=Path)
+    ap.add_argument("--out-dir", default="runs/figures", type=Path)
+    ap.add_argument("--configs-dir",
+                    default="experiments/configs", type=Path)
+    args = ap.parse_args()
+    args.out_dir.mkdir(parents=True, exist_ok=True)
+
+    all_aggs = load_agg(args.agg_dir)
+    if not all_aggs:
+        print("No aggregates found.")
+        return
+
+    primary = primary_keys(all_aggs, args.configs_dir)
+    primary_aggs = {k: all_aggs[k] for k in primary}
+
+    # 1) Headline confusion matrix — restricted to the 4 scoring
+    # experiments (E1, E6, E8, E9 R4). E4 and E5 are ablation /
+    # boundary characterization, not scoring, so they do not
+    # belong in the headline pooled CM.
+    cm_keys = {"E1_attack_detection", "E6_a4_oversize",
+                "E8_stochastic", "E9_evasion_r4"}
+    cm_aggs = {k: primary_aggs[k] for k in cm_keys if k in primary_aggs}
+    fig_confusion_matrix(cm_aggs,
+                          args.out_dir / "fig_confusion_matrix",
+                          title=f"Confusion matrix "
+                                f"(n = {sum_decisions(cm_aggs)} "
+                                f"decisions, E1/E6/E8/E9-R4)",
+                          primary_only=False)  # already filtered
+    print(f"[fig] confusion matrix — {len(cm_aggs)} scoring experiments")
+
+    # 2) Per-experiment bars with CI.
+    fig_per_experiment_bars(primary_aggs,
+                             args.out_dir / "fig_per_experiment")
+    print(f"[fig] per-experiment precision/recall/F1")
+
+    # 3) Latency distribution — E8 stochastic only (the statistical
+    # headline).  Earlier versions pooled across all primary experiments,
+    # which mixed E1's contaminated tail into the distribution and caused
+    # figure/caption inconsistency.  Using E8 alone matches what the
+    # abstract, §Evaluation, and Fig.~\ref{fig:latency} caption cite.
+    e8 = all_aggs.get("E8_stochastic")
+    lat = e8.get("latencies_flat", []) if e8 else []
+    if lat:
+        # Use the canonical p95/median from the aggregate so the figure
+        # labels match the numbers.tex macros used in the caption/text.
+        lat_block = e8.get("latency_seconds", {}) or {}
+        p95_ms = lat_block.get("p95")
+        med_ms = lat_block.get("median")
+        p95_ms = p95_ms * 1000 if p95_ms is not None else None
+        med_ms = med_ms * 1000 if med_ms is not None else None
+        fig_detection_latency(lat,
+                               args.out_dir / "fig_detection_latency",
+                               p95_override=p95_ms,
+                               med_override=med_ms)
+        print(f"[fig] latency distribution (n = {len(lat)}, E8 only)")
+
+    # 4) Methodology ablation — explicit about the contaminated runs.
+    fig_methodology_ablation(all_aggs, primary,
+                              args.out_dir / "fig_methodology_ablation")
+    print(f"[fig] methodology ablation")
+
+    # 5) RAT-aware arbiter ablation (E1 vs E4).
+    fig_rat_ablation(all_aggs, args.out_dir / "fig_rat_ablation")
+    print(f"[fig] RAT ablation (E1 vs E4)")
+
+    # 6) E11 throughput (if data is there)
+    fig_throughput(Path("runs/throughput/results.csv"),
+                    args.out_dir / "fig_throughput")
+    print(f"[fig] throughput (if available)")
+
+    # 7) E10 Suricata vs OTA-Shield (if both are there)
+    sur_path = Path("runs/baseline_suricata/comparison.json")
+    if sur_path.exists() and "E1_attack_detection" in all_aggs:
+        sur = json.loads(sur_path.read_text())
+        fig_suricata_vs_ours(sur, all_aggs["E1_attack_detection"],
+                             args.out_dir / "fig_suricata_vs_ours")
+        print(f"[fig] Suricata vs OTA-Shield")
+
+    # 5) LaTeX summary table — primary only.
+    table_summary_latex(primary_aggs,
+                         args.out_dir / "table_summary.tex")
+    print(f"[tab] summary table ({len(primary_aggs)} rows)")
+
+    print(f"\nOutputs in {args.out_dir}/")
+
+
+def sum_decisions(aggs: dict) -> int:
+    total = 0
+    for a in aggs.values():
+        for t in a["per_trial_raw"]:
+            total += t["tp"] + t["tn"] + t["fp"] + t["fn"]
+    return total
+
+
+if __name__ == "__main__":
+    main()

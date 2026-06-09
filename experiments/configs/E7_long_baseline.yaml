@@ -1,0 +1,16 @@
+# E7: Long-running stochastic legitimate baseline.
+# Generates measured distributions for empirical threshold derivation.
+# Default 30 minutes per trial @ ~0.5 Hz mean = ~900 events.
+# Scale duration_s up for steady-state (e.g. 14400 = 4 h) — be aware of
+# disk and aggregator memory.
+scenario: pack_long_baseline
+params:
+  duration_s: 1800
+  mean_iat_s: 2.0
+  seed: 42
+description: |
+  Authorized PUBLISHes to random BMSes with Poisson inter-arrivals
+  (lambda = 1/mean_iat_s). Used by analyze_baseline.py to compute
+  P99/P99.9/P99.99 of distinct-BMS-count per 60s window, per-BMS
+  inter-rollout intervals, and firmware-size distribution. Outputs
+  empirically justify the R5/R1/R4 threshold choices in the paper.

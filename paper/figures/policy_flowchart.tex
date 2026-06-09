@@ -1,0 +1,75 @@
+% OTA-Shield — Policy decision flowchart (two-stage arbiter).
+% Reflects the evaluated design: R2 and R4 terminal; R1/R5/R6 go
+% through the control-plane Gate A / Gate B arbiter.
+\begin{tikzpicture}[
+    font=\footnotesize,
+    >=Stealth,
+    node distance=5.5mm and 10mm,
+    start/.style  ={draw, rounded corners=6pt, fill=blue!10,
+                    minimum height=8mm, minimum width=28mm, align=center},
+    decision/.style={draw, diamond, aspect=2.2, fill=yellow!15,
+                     minimum width=24mm, inner sep=1pt, align=center},
+    gate/.style   ={draw, rounded corners=3pt, fill=orange!18, thick,
+                    minimum height=8mm, minimum width=28mm, align=center},
+    term/.style   ={draw, rounded corners=3pt, fill=red!15, thick,
+                    minimum height=7mm, minimum width=24mm, align=center},
+    pass/.style   ={draw, rounded corners=3pt, fill=green!25, thick,
+                    minimum height=7mm, minimum width=24mm, align=center},
+    arrow/.style  ={->, >=Stealth, shorten >=0.5pt, shorten <=0.5pt},
+    lbl/.style    ={font=\scriptsize, inner sep=1.5pt,
+                    fill=white, fill opacity=0.92, text opacity=1,
+                    rounded corners=1pt}]
+
+  %--- Entry ---------------------------------------------------------------
+  \node[start] (entry) {Packet enters\\PolicyEngine};
+
+  %--- R2 terminal ---------------------------------------------------------
+  \node[decision, below=of entry] (r2) {R2\\fired?};
+  \draw[arrow] (entry) -- (r2);
+
+  \node[term, right=14mm of r2] (drop_r2) {\textbf{DROP}\\unauthorized src};
+  \draw[arrow] (r2) -- node[lbl, above]{yes} (drop_r2);
+
+  %--- R4 terminal ---------------------------------------------------------
+  \node[decision, below=of r2] (r4) {R4\\fired?};
+  \draw[arrow] (r2) -- node[lbl, left]{no} (r4);
+
+  \node[term, right=14mm of r4] (drop_r4) {\textbf{DROP}\\oversize firmware};
+  \draw[arrow] (r4) -- node[lbl, above]{yes} (drop_r4);
+
+  %--- R6 arbitration (Gate B) --------------------------------------------
+  \node[decision, below=of r4] (r6) {R6\\fired?};
+  \draw[arrow] (r4) -- node[lbl, left]{no} (r6);
+
+  \node[gate, right=14mm of r6] (gateB) {\textbf{Gate~B}\\rollback\_window\\check};
+  \draw[arrow] (r6) -- node[lbl, above]{yes (HOLD)} (gateB);
+
+  %--- R1 or R5 arbitration (Gate A) --------------------------------------
+  \node[decision, below=of r6] (r15) {R1 or R5\\fired?};
+  \draw[arrow] (r6) -- node[lbl, left]{no} (r15);
+
+  \node[gate, right=14mm of r15] (gateA) {\textbf{Gate~A}\\rollout match?};
+  \draw[arrow] (r15) -- node[lbl, above]{yes (HOLD)} (gateA);
+
+  %--- No rule fired → PASS ------------------------------------------------
+  \node[pass, below=of r15] (pass_norule) {\textbf{PASS}\\no rule fired};
+  \draw[arrow] (r15) -- node[lbl, left]{no} (pass_norule);
+
+  %--- Gate outcomes (duplicated per gate to avoid 4-way collision) --------
+  \node[pass, right=10mm of gateB, yshift=4mm]  (allowB) {\textbf{ALLOW}};
+  \node[term, right=10mm of gateB, yshift=-4mm] (denyB)  {\textbf{DENY}};
+  \node[pass, right=10mm of gateA, yshift=4mm]  (allowA) {\textbf{ALLOW}};
+  \node[term, right=10mm of gateA, yshift=-4mm] (denyA)  {\textbf{DENY}};
+
+  \draw[arrow] (gateB.east) -- node[lbl, pos=0.35]{window\,ok} (allowB.west);
+  \draw[arrow] (gateB.east) -- node[lbl, pos=0.35]{no window} (denyB.west);
+  \draw[arrow] (gateA.east) -- node[lbl, pos=0.35]{match} (allowA.west);
+  \draw[arrow] (gateA.east) -- node[lbl, pos=0.35]{miss}  (denyA.west);
+
+  % Visual identity: the two ALLOW/DENY pairs are the same session_allow /
+  % session_deny (5 s TTL) outputs; dashed links convey this without stacking
+  % four labels in the same region.
+  \draw[dashed, black!40] (allowA.south) -- (allowB.north);
+  \draw[dashed, black!40] (denyA.north)  -- (denyB.south);
+
+\end{tikzpicture}

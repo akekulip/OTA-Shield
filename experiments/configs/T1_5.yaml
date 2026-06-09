@@ -1,0 +1,53 @@
+# T1.5 — HOLD-leak measurement (Tier-1 falsifier check).
+#
+# Source: EXPERIMENT_DESIGN.md §1 T1.5; scenarios.py §1.7;
+#         panel-8 01_threat_scenario_dataset.md §2.
+#
+# The trial harness drives staged_rollout_v48 (60%) overlapping with
+# r5_fanout_clear (40%); tcpdump on PORT_HULK is the falsifier
+# instrument (sees egress bytes between digest emit and override
+# install). Acceptance gate: per-event p95 <= 1 MQTT PUBLISH frame.
+#
+# Wall-clock estimate (~6 h): 10 trials * (declared_duration_s + drain).
+
+schema_version: 1
+experiment_id: T1.5
+description: |
+  HOLD-leak measurement: bytes-leaked-per-HOLD-event under staged
+  rollout overlapped with r5_fanout_clear. Acceptance test, not a
+  generalization study; held_out_fraction = 0.0.
+scenarios:
+  - id: bess.benign.staged_rollout_v48
+    weight: 0.6
+  - id: bess.attack.r5_fanout_clear
+    weight: 0.4
+trial_count: 10
+held_out_fraction: 0.0
+master_seed: "0xCAFE"
+declared_duration_s: 120
+target_pps: 100
+primary_metric: bytes_leaked_per_hold_event
+falsifier: |
+  tcpdump on PORT_HULK shows >1 MQTT PUBLISH frame (>= 2 PUBLISHes)
+  per HOLD event after the data-plane patch lands.
+pass_criterion: |
+  Per-event p95 of bytes-leaked-per-HOLD-event <= 1 MQTT PUBLISH frame
+  after the fix.
+wall_clock_estimate_h: 6
+# Statistical contract per EXPERIMENT_DESIGN §5 + 02_statistical_design.md.
+statistical_test: |
+  Wilson 95% on bounded-frame counts; Clopper-Pearson UB on the
+  zero-leak rate (per-HOLD-event resampling unit).
+# Required preflight items (from Testbed §3, 13-item gate).
+preflight:
+  required_integrity_items: [1, 2, 3, 6, 8, 9, 10, 11, 12]
+  scenarios_requiring_sanity_check: []
+  hardware_assertions:
+    - "ports 8 and 11 UP at 25G RS-FEC"
+    - "bf_switchd PID alive"
+    - "controller PID alive"
+    - "RAT signature verified at trial start (item 12)"
+    - "hold_armed_reg present in loaded P4 (gRPC binding + table list)"
+# Live (Tier-1 always live per Testbed §7).
+replay_mode: live
+post_wait_s: 10

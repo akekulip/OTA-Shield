@@ -1,0 +1,8 @@
+# E5: Adversarial near-threshold probe.
+# Scans fanout size 3..7 to map R5 detection boundary. Pauses 65s between
+# steps so each fanout experiences a fresh window.
+scenario: pack_adversarial_near_threshold
+params: {}
+description: |
+  Fanout sweep 3,4,5,6,7 BMSes — should NOT fire R5 at 3-4 (below threshold
+  of 4 → count must exceed threshold), SHOULD fire at 5,6,7.

@@ -1,0 +1,26 @@
+# E8': 200-BMS stochastic attack extrapolation (IJCIP reviewer M4).
+#
+# Stochastic counterpart to E1_200bms.yaml. Adds log-uniform firmware
+# sizes, version-monotonic per-BMS rollouts, and ephemeral-port
+# allocation so aggregation tests at 200-BMS scale exercise the same
+# five-tuple collision modes a real fleet would see.
+#
+# Everything in this config is grounded in per-BMS measurements from the
+# 50-host testbed. Only the fleet size and the addresses 10.0.2.60..209
+# are extrapolated; see m4_extrapolation_notes.md.
+scenario: pack_e8_200bms_extrapolation
+module: experiments.scenarios_m4
+params:
+  seed: 0
+  n_bms: 200
+  per_bms_rate_hz: 0.2
+  duration_s: 180.0
+  attack_fraction: 0.30
+output:
+  out_dir: "runs/m4"
+description: |
+  Expected event count ≈ 200 * 0.2 * 180 = 7200 events. 70% LEGIT / 30%
+  ATTACK. Bootstrap F1 CIs at 200-BMS scale require TRIALS >= 10 with
+  per-trial seed injection (sweep.py seed_per_trial=1). Any 5-tuple
+  collisions the aggregator sees are reported as NO_DECISION rather than
+  silently collapsed — this is the main mode of interest at scale.

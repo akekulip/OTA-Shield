@@ -1,0 +1,71 @@
+# T1.7 — 5-tuple override at 200 sources (Tier-1 falsifier check).
+#
+# Source: EXPERIMENT_DESIGN.md §1 T1.7; panel-8 01_threat_scenario_dataset.md
+#         §1.5 (only the 5-tuple aliasing portion — fleet scaling is T2.6).
+#
+# 5 trials. Each trial emits 200 sources × (1 ALLOW 5-tuple + 1
+# secondary 5-tuple from same src). Override-table size locked at 256
+# (well above 200) so RESOURCE_EXHAUSTED == 0 is the headroom check;
+# cross-tuple authorization rate counts how many secondary 5-tuples
+# inherit ALLOW (must be 0).
+#
+# Wall-clock estimate (~4 h): RAT install dominates (~2,000 entries
+# per trial); per panel §9.
+
+schema_version: 1
+experiment_id: T1.7
+description: |
+  5-tuple override capacity + alias check at 200 sources, table size 256.
+  Falsifier: any RESOURCE_EXHAUSTED reject OR any cross-tuple ALLOW.
+scenarios:
+  - id: bess.5tuple_aliasing
+    weight: 1.0
+trial_count: 5
+held_out_fraction: 0.0
+master_seed: "0xCAFE"
+declared_duration_s: 240     # 200 ALLOW + 200 alias + RAT install pacing
+target_pps: 200
+primary_metric:
+  - resource_exhausted_count
+  - cross_tuple_authorization_rate
+falsifier: |
+  Any RESOURCE_EXHAUSTED reject AT table size 256, OR any cross-tuple
+  ALLOW (secondary 5-tuple inheriting ALLOW from the original entry).
+pass_criterion: |
+  resource_exhausted_count == 0 AND cross_tuple_authorization_rate == 0
+  on every trial.
+wall_clock_estimate_h: 4
+statistical_test: |
+  Clopper-Pearson UB on the cross-tuple authorization rate AND on the
+  RESOURCE_EXHAUSTED rate (zero-event class per EXPERIMENT_DESIGN §5).
+# Generator parameters consumed by traffic_gen.scenario_5tuple_alias.
+generator:
+  module: traffic_gen.scenario_5tuple_alias
+  scenario_class: FiveTupleAliasScenario
+  params:
+    n_sources: 200
+    aliases_per_src: 1
+    port_range: [40000, 50000]
+    dst_ip_a:  "10.0.2.10"
+    dst_port_a: 1883
+    dst_port_b: 1884
+preflight:
+  required_integrity_items: [1, 2, 3, 6, 8, 9, 10, 11, 12]
+  scenarios_requiring_sanity_check:
+    - bess.5tuple_aliasing
+  hardware_assertions:
+    - "ports 8 and 11 UP at 25G RS-FEC"
+    - "bf_switchd PID alive"
+    - "controller PID alive"
+    - "RAT signature verified at trial start (item 12)"
+    - "session_action_override has 5-tuple key shape AND size == 256"
+override_table:
+  expected_size: 256
+  expected_key:
+    - "src_ip"
+    - "dst_ip"
+    - "src_port"
+    - "dst_port"
+    - "protocol"
+replay_mode: live
+post_wait_s: 10

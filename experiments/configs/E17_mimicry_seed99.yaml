@@ -1,0 +1,6 @@
+scenario: pack_mimicry_e17
+params:
+  seed: 99
+description: |
+  T2.5 v2 — sport-randomized mimicry trial (seed=99 -> sport_offset=99000).
+  Verifies override-contamination is gone vs the v1 wave.

@@ -1,0 +1,10 @@
+# E9-R1 fast variant: only probe immediate edge {14399, 14400, 14401}
+# plus a low and a high anchor. ~ 1 hour total.
+scenario: pack_evasion_r1
+params:
+  intervals_s: [10, 14399, 14400, 14401]
+  base_bms: 0
+  sport_base: 57000
+description: |
+  Quick R1 boundary probe (~ 8.7 h with the 14400+18000 pair, but if you
+  drop 18000 it becomes ~ 4 h). Fast smoke test for the boundary plot.

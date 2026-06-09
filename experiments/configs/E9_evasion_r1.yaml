@@ -1,0 +1,15 @@
+# E9-R1: rapid-replay edge sweep around the 14400 s threshold.
+# WARNING: total runtime is the SUM of all intervals_s entries plus
+# baseline pulses. Default list ~= 18000 + 14500 + 14401 + 14400 + 14399
+# + 14000 + 7200 + 3600 + 300 + 60 + 1 ≈ 99999 s ≈ 28 h.
+# For a fast smoke test reduce the intervals.
+scenario: pack_evasion_r1
+params:
+  intervals_s: [1, 60, 300, 3600, 7200, 14000, 14399, 14400, 14401, 14500, 18000]
+  base_bms: 0
+  sport_base: 57000
+description: |
+  Each interval probed against a distinct BMS. Pairs of (baseline pulse,
+  replay pulse) with the gap between them = the interval. Detection edge
+  expected at 14400 s; R1 should fire at 14399 s and below, NOT fire at
+  14400 s and above. Ground truth labels reflect this.

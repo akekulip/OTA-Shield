@@ -1,0 +1,32 @@
+/* OTA-Shield — pragmas.p4h
+ *
+ * Central place to track explicit stage pinning. Phase 1 does not pin anything —
+ * the skeleton is small enough that the compiler's default allocation is fine.
+ *
+ * As modules are added, add @pragma stage N directives on the table/register
+ * declarations that need to live in specific MAU stages, per the stage plan
+ * in plans/coding_plan.md §2.2:
+ *
+ *   Stage 0:  parser
+ *   Stage 1:  MQTT fixed header + topic prefix
+ *   Stage 2:  OTA header check
+ *   Stage 3:  Session ID hash + register read
+ *   Stage 4:  R2 source check + R3 version lookup
+ *   Stage 5:  R1 frequency check
+ *   Stage 6:  R4 size check
+ *   Stage 7:  CMS[0] update + read
+ *   Stage 8:  CMS[1] update + read
+ *   Stage 9:  CMS[2] update + read + min + R5 compare
+ *   Stage 10: Policy combine + action encoding
+ *   Stage 11: (slack / deparser setup)
+ *
+ * Bring-up rule: let the compiler allocate first. Only pin stages when
+ * the allocator produces a bad layout (e.g., resource contention, stage overflow).
+ */
+
+#ifndef _OTA_SHIELD_PRAGMAS_P4H_
+#define _OTA_SHIELD_PRAGMAS_P4H_
+
+/* placeholder — no pragmas yet */
+
+#endif /* _OTA_SHIELD_PRAGMAS_P4H_ */

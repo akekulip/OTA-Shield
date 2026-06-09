@@ -1,0 +1,20 @@
+# E17: Held-out mimicry / near-threshold adversarial probes.
+# Three attack families that probe the documented blind zones of
+# each data-plane rule. Directly addresses the 'too-clean' critique.
+#
+# mimicry_fanout_sub : fanout = 4 per window, repeated across cycles
+#                      → R5 never fires but the campaign still reaches
+#                        most of the fleet.
+# mimicry_r4_deadzone: payload sizes inside R4's 64 KiB quantization
+#                      blind zone [2.0 MiB, 2.0625 MiB].
+# mimicry_r1_late    : replay with nominal gap > R1's 14400 s threshold.
+#
+# Outcome to analyze per strategy: did R1/R2/R4/R5 fire on each event?
+# The paper claim is honest characterisation of blind zones.
+scenario: pack_mimicry_e17
+params:
+  seed: 1
+description: |
+  E17 held-out mimicry (fanout-sub, R4-deadzone, R1-late). Uses the
+  existing RAT; R2 will fire on the mimicry_fanout_sub events because
+  they come from ATTACK_SRC (10.0.1.99) not on the authorized list.
