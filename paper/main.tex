@@ -135,8 +135,8 @@ misbehavior has documented grid-impact pathways: modelled
 frequency-response loss~\cite{ohrstrom2025balance}, thermal runaway
 as documented in the McMicken~2019 and Moss~Landing~2024 incidents
 (neither attributed to OTA compromise), and supply withdrawal during
-peak demand~\cite{culler2025threatlandscape}. We do not claim any of
-these events was caused by OTA compromise. Quantitative grid-impact
+peak demand~\cite{culler2025threatlandscape}. None of these incidents is
+attributed to OTA compromise. Quantitative grid-impact
 study is out of scope; the documented attack surface and the
 documented impact pathways are independently sufficient motivation.
 
@@ -175,8 +175,7 @@ Programmable switches provide a per-packet vantage point for that
 observation. An Intel \tofino{} pipeline can parse MQTT, extract an
 OTA header, maintain per-flow counters, and fire detection rules
 inside the ASIC forwarding path~\cite{hauser2023p4survey}. We use the
-\tofino{} for its programmability, not as a throughput claim: switch
-line-rate is not measured in this paper (see~\S\ref{sec:discussion}).
+\tofino{} for its programmability, not for a throughput claim.
 Earlier work applied these primitives to volumetric
 DDoS~\cite{liu2021jaqen,zhang2020poseidon} and generic per-flow
 ML~\cite{samsonraj2025dddas,chen2024p4nids}, but we are not aware of
@@ -1938,126 +1937,74 @@ parser's sensitivity to MQTT-profile variations (E18).
   latency, so pooling them would overstate the on-path tail.}
   \label{fig:latency}
 \end{figure*}
-Using the timestamps already written to the E8 logs we decompose
-end-to-end latency into two measurable stages on the
-\EEightstochasticLatencyN{} attack events reported in
-Fig.~\ref{fig:latency}. Stage~1 (send time $\to$ controller-side digest
-arrival) captures the packet's flight from the generator plus the \tofino{}
-pipeline plus the gRPC digest transport. Stage~2 (digest arrival $\to$
-controller decision) captures the RAT arbitration path on the Python
-side. Medians are stage~1~$=$~29.5~ms and stage~2~$=$~4.5~ms, and the
-additive end-to-end median is therefore
-\EEightstochasticLatencyMedianMs{}~ms = 29.5~ms + 4.5~ms (within the
-0.1~ms rounding the macro carries). At p95 the two stages contribute
+Using the timestamps in the E8 logs we split end-to-end latency on the
+\EEightstochasticLatencyN{} attack events (Fig.~\ref{fig:latency}) into
+two stages: stage~1 (send $\to$ controller-side digest arrival: generator
+flight, \tofino{} pipeline, and gRPC transport) and stage~2 (digest
+arrival $\to$ RAT decision, the Python arbitration path). Medians are
+29.5~ms and 4.5~ms, so the end-to-end median is
+\EEightstochasticLatencyMedianMs{}~ms; at p95 the stages contribute
 41.8~ms and 4.8~ms for an end-to-end p95 of
-\EEightstochasticLatencyPninefiveMs{}~ms (= 41.8 + 4.8 within rounding).
-The per-stage breakdown makes explicit that \emph{``in-switch''} does
-not mean \emph{``in-switch latency''}: the dominant term is stage~1
-(generator emission + \tofino{} pipeline + gRPC transport), and the ASIC
-pipeline itself is a microsecond-scale component inside that
-$\approx$29~ms envelope. Stage~2 contributes a small but non-negligible
-4.5~ms tail to every decision because the controller's RAT-arbitration
-path is Python and runs synchronously on digest receipt; stage~2 is the
-largest software-side optimization target if a tighter SLA is required.
-The latency distribution has a short head and a small tail. The tail is
-driven by two infrequent controller-side events: a state-reset barrier
-between trials, during which digest processing pauses briefly; and a
-timer-based override-TTL sweep that contends with the main digest loop
-for the gRPC channel when many session overrides expire at once. Neither
-event is on the path of a data-plane fire-to-detection decision; both
-affect when the controller's Python loop returns to the digest receive
-call after the barrier. For an operational SLA measured in seconds (OTA
-campaigns run over minutes to hours), this tail is tolerable; for a
-tighter SLA, moving timer-driven override expiry out of the main thread
-would flatten it.
+\EEightstochasticLatencyPninefiveMs{}~ms. The breakdown shows that
+\emph{``in-switch''} is not \emph{``in-switch latency''}: stage~1
+dominates and the ASIC pipeline is a microsecond-scale term inside that
+$\approx$29~ms envelope, while the 4.5~ms Python stage~2 is the
+software-side optimization target if a tighter SLA is needed. The short
+tail comes from two off-path controller events, an inter-trial
+state-reset barrier and a timer-based override-TTL sweep contending for
+the gRPC channel; neither is on the fire-to-decision path, and for an OTA
+SLA measured in minutes to hours the tail is tolerable.
 
 \paragraph{Controller digest-channel sustainable rate (E11).}\label{sec:e11}
 E11 measures the controller's classify/MQTT-parse digest ingestion path
-(phases 1 and 2), not the phase-6 HOLD path: the generator sends MQTT
-PUBLISHes to a destination outside the authorized BMS fleet with a
-non-OTA topic prefix, so no rule fires and no override installs. The
-pipeline still emits a phase-1 or phase-2 digest per parsed packet, and
-it is this digest delivery the controller has to sustain. Sweeping
-100/500/1000/2000~pps, the controller observed
-\ElevenTotalObserved{}/\ElevenTotalSent{} digests for an aggregate loss
-of \ElevenAggregateLossPct{}\% (worst per-rate \ElevenWorstLossPct{}\%
-at 100~pps, statistical noise on the smallest window). The scapy
-generator caps offered load near 2{,}200~pps, so this is a lower bound
-on the controller's classify-digest rate, not an upper bound on switch
-capability or on the HOLD-digest path. The HOLD-digest path is exercised
-separately at the override-install rate measured in E13: every R5 fire
-emits one phase-6 digest, the controller arbitrates, and installs at
-most one override per source. ``No rule fires, no phase-6 digest, but a
-classify/MQTT-parse digest still streams'' is the precise mapping
-between E11's offered traffic and the measured digest count, and
-resolves the apparent tension with the ``no rule fires $\Rightarrow$ no
-digest'' phrasing used elsewhere, which referred specifically to
-phase-6 HOLD digests. Line-rate testing of either path requires a DPDK
-generator such as P4TG~\cite{lindner2023p4tg,ihle2025p4tgenhancements}
-and is deferred to future work.
+(phases~1--2), not the HOLD path: the generator sends non-OTA PUBLISHes to
+a destination outside the authorized fleet, so no rule fires and no
+override installs, yet the pipeline still emits one classify/parse digest
+per packet. Sweeping 100/500/1000/2000~pps, the controller observed
+\ElevenTotalObserved{}/\ElevenTotalSent{} digests, an aggregate loss of
+\ElevenAggregateLossPct{}\% (worst \ElevenWorstLossPct{}\% at 100~pps,
+noise on the smallest window). The scapy generator caps offered load near
+2{,}200~pps, so this is a lower bound on the controller's classify-digest
+rate, not an upper bound on switch capability or on the HOLD path
+(exercised separately in E13, where each R5 fire emits one HOLD digest and
+installs at most one override per source). This also resolves the ``no
+rule fires $\Rightarrow$ no digest'' phrasing used elsewhere, which
+referred only to HOLD digests. Line-rate testing of either path needs a
+DPDK generator such as P4TG~\cite{lindner2023p4tg,ihle2025p4tgenhancements}
+and is left to future work.
 
 \paragraph{Override-table capacity (E13/T1.7).}\label{sec:e13}
 The deployed \texttt{session\_action\_override} table keys on the full
 5-tuple (\texttt{src\_addr}, \texttt{dst\_addr}, \texttt{dst\_port},
-\texttt{protocol}, \texttt{src\_port}) and is sized at
-\TOneSevenTableSize{} entries; we confirmed this key shape and size by
-\texttt{bfrt\_grpc} inspection of the running pipeline on every trial of
-T1.7. The 5-tuple key is a deliberate isolation property: an
-\texttt{ALLOW} installed for one flow does not authorize unrelated traffic
-from the same source, since an alias 5-tuple with different ports cannot
-collision-match the entry. T1.7 measures the deployed table's capacity:
-\TOneSevenNSources{} concurrent sources, one \texttt{ALLOW} each, install
-cleanly across \TOneSevenNTrials{} trials (\TOneSevenTotalInserts{}
-inserts in total) with \TOneSevenRejects{} \texttt{RESOURCE\_EXHAUSTED}
-rejects (Clopper--Pearson 95\% upper bound \TOneSevenRejectUBPct{}\%), so
-the \TOneSevenTableSize{}-entry table has headroom for a 200-source fleet
-at one HOLD per source. The capacity that matters under this key is
-\emph{5-tuple} cardinality, not source-IP cardinality: a single source
-fanning out across many BMSes with churning ephemeral ports can generate
-many distinct 5-tuples, which is why the table is paired with a 5~s
-fail-closed TTL and why a source-IP aggregation variant is retained for
-fanout-heavy deployments. The remainder of this paragraph reports that
-variant.
+\texttt{protocol}, \texttt{src\_port}) at \TOneSevenTableSize{} entries,
+confirmed by \texttt{bfrt\_grpc} inspection on every T1.7 trial. The
+5-tuple key is an isolation property: an \texttt{ALLOW} for one flow does
+not authorize unrelated traffic from the same source. T1.7 installs one
+\texttt{ALLOW} for each of \TOneSevenNSources{} concurrent sources across
+\TOneSevenNTrials{} trials (\TOneSevenTotalInserts{} inserts) with
+\TOneSevenRejects{} \texttt{RESOURCE\_EXHAUSTED} rejects (Clopper--Pearson
+95\% upper bound \TOneSevenRejectUBPct{}\%), so the
+\TOneSevenTableSize{}-entry table has headroom for a 200-source fleet at
+one HOLD per source. Because capacity is bounded by 5-tuple cardinality (a
+single source with churning ephemeral ports generates many 5-tuples), the
+table is paired with a 5~s fail-closed TTL, and a source-IP aggregation
+variant is retained for fanout-heavy deployments.
 
-\medskip\noindent\textit{Source-IP aggregation variant.}
-The pilot 5-tuple-keyed override table at 1024 entries saturates within
-seconds under sustained R5 fanout: a 1000~pps burst against 50 BMSes with
-unique ephemeral source ports floods the table before the 5~s TTL can
-evict stale entries. The aggregation variant instead keys on source IP
-only, so every HOLD from one source collapses into a single table entry
-regardless of how many BMSes the fanout covers. One override per source
-covers that source's entire fanout until TTL expiry.
-
-We run the install-pressure workload (sweep offered rate \{100, 250,
-500, 1000\}~pps for 10~s, realized rate capped near
-\EThirteenAggRealisedPpsMax{}~pps by the scapy raw-socket ceiling) from a
-single authorized source. The E13 realized-rate ceiling
-($\approx$500~pps) is lower than the E11 digest-channel ceiling
-($\approx$2{,}200~pps) because the two workloads stress different
-per-packet scapy costs: E11 sends a uniform PUBLISH stream to a single
-unauthorized destination with no rule firing and no override install,
-while E13 sweeps distinct source IPs and triggers a fresh R5 HOLD per
-source that the generator must follow up with an install-ack bookkeeping
-step. The per-frame encoding cost is therefore higher in E13, and the
-same scapy raw-socket generator delivers a lower realised rate for the
-same offered load. This is a property of the traffic shape and the
-userspace generator, not a different hardware bound on the switch. Under
-the aggregation variant, peak active override entries stay at
-\EThirteenAggSingleSrcPeakActive{} across all four windows, despite
-\EThirteenAggSingleSrcFiveTuples{} distinct 5-tuples in the largest
-window. To measure the variant's cap on source-IP cardinality, we sweep
-\{\EThirteenAggSrcSweepCounts{}\} distinct source IPs at 500~pps for 10~s
-each (Fig.~\ref{fig:override_cap}). Peak active override entries track source-IP cardinality exactly
-(\EThirteenAggSrcSweepPeakActives{}), and the switch records
-\EThirteenAggSrcSweepRejects{} RESOURCE\_EXHAUSTED rejects across
-\EThirteenAggSrcSweepTotalDecisions{} controller decisions. Table
-occupancy is therefore bounded by source-IP cardinality, which typically
-is 1--2 in a BESS fleet regardless of 5-tuple churn from ephemeral
-ports. We retain this source-IP aggregation as a compile-time knob for
-fanout-heavy deployments; the \emph{default in the deployed pipeline is
-the 5-tuple-keyed table} characterised by T1.7 above, chosen for its
-per-flow authorization isolation rather than for the lower occupancy of
-the aggregation variant.
+\medskip\noindent\textit{Source-IP aggregation variant.} A 1024-entry
+5-tuple table saturates within seconds under sustained R5 fanout (a
+1000~pps burst against 50 BMSes with unique ephemeral ports floods it
+before the 5~s TTL evicts). Keying on source IP instead collapses every
+HOLD from one source into a single entry. Sweeping
+\{\EThirteenAggSrcSweepCounts{}\} distinct source IPs at
+\EThirteenAggRealisedPpsMax{}~pps (Fig.~\ref{fig:override_cap}), peak
+active entries track source-IP cardinality exactly
+(\EThirteenAggSrcSweepPeakActives{}: \EThirteenAggSingleSrcPeakActive{}
+entry despite \EThirteenAggSingleSrcFiveTuples{} distinct 5-tuples in the
+largest window) with \EThirteenAggSrcSweepRejects{} rejects across
+\EThirteenAggSrcSweepTotalDecisions{} decisions. Occupancy is thus bounded
+by source-IP cardinality, typically 1--2 in a BESS fleet. The variant is a
+compile-time knob; the deployed default is the 5-tuple table characterised
+by T1.7, chosen for per-flow authorization isolation.
 
 \begin{figure}[pos=htbp]
   \centering
