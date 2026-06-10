@@ -69,10 +69,18 @@
 \emergencystretch=2em
 
 \shorttitle{\otashield: in-network detection of BESS OTA attacks}
-\shortauthors{}
+\shortauthors{Akekudaga}
 
 \title[mode=title]{\otashield: A Hardware-Measured Reference Architecture for In-Network
   OTA Rollout Admission and Bounded Firmware-Attack Detection in Battery Energy Storage Systems}
+
+\author[1]{Philip Akekudaga}
+\cormark[1]
+%% TODO (author to confirm at camera-ready): email, ORCID, and any co-authors/advisors.
+% \ead{<corresponding-email>}
+\affiliation[1]{organization={University of Rhode Island},
+  city={Kingston}, state={RI}, country={USA}}
+\cortext[1]{Corresponding author.}
 
 \begin{abstract}
 Battery energy storage systems (BESS) depend on over-the-air (OTA)
@@ -849,19 +857,10 @@ the arbiter.
 
 \subsection{P4 ingress pipeline}
 
-The ingress pipeline (Fig.~\ref{fig:pipeline}) comprises a
-protocol-aware parser and nine MAU-stage control blocks, within the
-12-stage \tofino{} budget.
-
-\begin{figure*}[pos=htbp]
-  \centering
-  \includegraphics[width=0.95\textwidth]{figures/p4_pipeline.pdf}
-  \caption{P4 ingress pipeline. Dashed arrows connect MAU control
-  blocks to their stateful registers. Topic and OTA header use
-  fixed-size slots; other parameter combinations are discussed in
-  \S\ref{sec:e18}.}
-  \label{fig:pipeline}
-\end{figure*}
+The ingress pipeline comprises a protocol-aware parser and nine MAU-stage
+control blocks (the data-plane half of Fig.~\ref{fig:arch}), within the
+12-stage \tofino{} budget; topic and OTA header use fixed-size slots
+(\S\ref{sec:e18}).
 
 \paragraph{Parser.} The ingress parser identifies MQTT traffic on TCP
 port~1883. For MQTT PUBLISH packets (\texttt{mtype}=3), it extracts the
@@ -1034,17 +1033,6 @@ Table~\ref{tab:results} indexes every experiment to the RQ it supports
 and to the subsection in which it is reported.
 
 \subsection{Testbed}\label{sec:testbed}
-
-\begin{figure*}[pos=htbp]
-  \centering
-  \includegraphics[width=0.8\textwidth]{figures/testbed_topology.pdf}
-  \caption{Testbed topology. An OTA update server and a 50-unit BMS
-  fleet connect to a programmable switch through data-plane links
-  configured at 25\,Gb/s with RS-FEC (link capability; the experiments
-  in this paper do not offer traffic at that rate). A separate
-  management LAN carries control-plane gRPC traffic.}
-  \label{fig:testbed}
-\end{figure*}
 
 The testbed (Fig.~\ref{fig:testbed}) consists of two commodity servers
 bridged by a programmable switch. One server is the OTA update server,
@@ -1233,17 +1221,6 @@ precision at 200~BMS is reported separately in S1/S2
   (RAT disabled), not a detector-scoring run, so it is excluded from the
   pooled detector matrix.}
   \label{fig:cm}
-\end{figure}
-
-\begin{figure}[pos=htbp]
-  \centering
-  \includegraphics[width=\columnwidth]{figures/fig_per_experiment.pdf}
-  \caption{Per-trial precision, recall, and F\textsubscript{1} across
-  the \EEightstochasticNTrials{} stochastic E8 trials, with the
-  F\textsubscript{1} bootstrap 95\% CI band shaded. The narrow
-  dispersion shows that stochastic performance stays close to the CI
-  interval reported for E8 in Table~\ref{tab:results}.}
-  \label{fig:per_exp}
 \end{figure}
 
 \paragraph{Authorized rollouts are admitted without false drops (E12).}\label{sec:e12}
@@ -1459,18 +1436,6 @@ RQ3 asks how each rule degrades when an adversary is free to choose
 attack parameters near the rule's detection boundary or to slow-play an
 attack across a realistic deployment horizon.
 
-\begin{figure}[pos=htbp]
-  \centering
-  \includegraphics[width=0.92\columnwidth]{figures/F11_co_equal_headline.pdf}
-  \caption{The two headline numbers, shown co-equal on a common
-  $[0,1]$ scale: (a)~naive fleet-fanout detection
-  F\textsubscript{1}~=~\EEightstochasticFOneMean{} (E8) versus
-  (b)~adaptive-mimicry coverage \EOneSevenmimicryStrategyCatchPct\%
-  (E21). The headline applies to the designed naive family; an adversary
-  who reshapes cadence faces the right-hand number.}
-  \label{fig:co-equal}
-\end{figure}
-
 \paragraph{Evasion sweeps map the rule boundaries (E9).}\label{sec:e9}
 E9 probes the detection boundaries of R1, R4, and R5 by varying the
 attack parameter across the threshold edge. \emph{R5 sweep:} fanout
@@ -1499,17 +1464,6 @@ limitation of the range-match encoding.
 at $\geq 14400$~s, confirming the exact boundary. The 16-bit
 wrap-around creates a theoretical false-positive window at 18.2-hour
 multiples (\S\ref{sec:discussion}).
-
-\begin{figure}[pos=htbp]
-  \centering
-  \includegraphics[width=0.85\columnwidth]{figures/fig_r5_boundary.pdf}
-  \caption{R5 sensitivity as a function of fanout size: P(R5 fires) grows
-  linearly above threshold 4, characterizing the rule's intrinsic counter.
-  On the deployed build R5's counter is r2-gated, so an authorized fanout
-  never fires R5 (\S\ref{sec:cascade-fix}); the authorized-rollout PASS
-  rate is 1.0 trivially, with no R5 fire to demote.}
-  \label{fig:r5}
-\end{figure}
 
 \paragraph{R1 behavior at high traffic rates.} Under E7's traffic
 profile (one PUBLISH per 2~s mean across 50~BMSes), the mean per-BMS
@@ -1540,38 +1494,8 @@ range-match dead zone so R4 does not fire; (iv) \emph{combined} mixes
 sub-threshold fanout with the R4 dead zone; (v) \emph{R1 late-replay}
 re-hits the same BMS with a second replay in each pair.
 
-\begin{table}[pos=htbp]
-  \centering
-  \caption{Rule fires per mimicry strategy (E21) under
-  per-strategy isolation, summed over \EOneSevenmimicryNTrials{}
-  campaigns (\EOneSevenmimicryStrategyTotal{} attack events total).
-  Each strategy is designed to evade a specific data-plane rule;
-  ``caught'' counts events the controller dropped, ``missed'' counts
-  everything else. Under isolation, only \emph{R1-late} produces any
-  drop; every sub-threshold strategy evades entirely. Missed events
-  escape the data plane and would need control-plane or endpoint
-  recovery.}
-  \label{tab:mimicry}
-  \footnotesize
-  \begin{tabular}{@{}l r r r r r r r@{}}
-    \toprule
-    Strategy & N & R1 & R2 & R4 & R5 & caught & missed \\
-    \midrule
-    fanout-sub    & 720 &  0 &  0 &  0 &  0 &  0 & 720 \\
-    fanout-three  & 540 &  0 &  0 &  0 &  0 &  0 & 540 \\
-    R4-deadzone   &  90 &  0 &  0 &  0 &  0 &  0 &  90 \\
-    combined      & 360 &  0 &  0 &  0 &  0 &  0 & 360 \\
-    R1-late       &  60 & 30 &  0 &  0 &  0 & 30 &  30 \\
-    \midrule
-    Total         &\EOneSevenmimicryStrategyTotal{}& 30 & 0 & 0 & 0
-                  &\EOneSevenmimicryStrategyCaught{}
-                  &\EOneSevenmimicryStrategyMissed{} \\
-    \bottomrule
-  \end{tabular}
-\end{table}
-
-The per-strategy fire counts are in Table~\ref{tab:mimicry} and the
-per-strategy detection rates in Fig.~\ref{fig:mimicry}. R5 fires on zero
+The per-strategy fire counts and detection rates are in
+Table~\ref{tab:mimicry}. R5 fires on zero
 of the 720 fanout-sub and 540 fanout-three events,
 confirming the sub-threshold-fanout blind zone on the hardware; R4 fires
 on zero of the 90 dead-zone events, confirming the range-match blind
@@ -1592,19 +1516,6 @@ Across all strategies the data plane drops only
 drop. These are the rule set's blind zones under adversarial input design;
 endpoint signature verification and operator-side rollout monitoring remain
 needed to close them.
-
-\begin{figure}[pos=htbp]
-  \centering
-  \includegraphics[width=0.92\columnwidth]{figures/F6_mimicry_per_strategy.pdf}
-  \caption{Per-strategy adaptive-mimicry detection rate (E21) over
-  \EOneSevenmimicryNTrials{} campaigns; error bars are Wilson 95\% CIs.
-  Only \texttt{r1-late} produces any detection (R1 on the second replay,
-  \EOneSevenmimicryRoneLateRate{}); every sub-threshold strategy evades
-  entirely (0/N with Wilson upper bounds $<\!5\%$). Cross-strategy BCa
-  F\textsubscript{1}~=~\EOneSevenmimicryFOneMean{}
-  [\EOneSevenmimicryFOneCIlo{},~\EOneSevenmimicryFOneCIhi{}].}
-  \label{fig:mimicry}
-\end{figure}
 
 \paragraph{TCP segmentation defeats a header-bound parser (E23).}\label{sec:e23-tcp}
 The data plane parses the MQTT/OTA header per packet; it performs no TCP
@@ -1633,20 +1544,6 @@ fanout-evasion results. The practical consequence: an adversary who
 fragments the OTA PUBLISH at the TCP layer defeats the header-dependent
 rules wholesale, so a stateful upstream reassembly point (or a
 reassembling endpoint check) is required to close this class.
-
-\begin{figure}[pos=htbp]
-  \centering
-  \includegraphics[width=0.92\columnwidth]{figures/F15_tcp_evasion.pdf}
-  \caption{TCP-segmentation evasion (E23): observed per-cell drop
-  rate over 10 trials/cell (250 trials), each cell reset-isolated; cell
-  text is observed rate (predicted in parens). Header-split evasions
-  defeat every rule including the source-keyed R2; only
-  \texttt{retransmit-dup} (intact PUBLISH on the wire) yields
-  parse-dependent detection, and only probabilistically. The R5 column
-  does not exercise genuine fanout (single-PUBLISH base attack) and is
-  shown for completeness.}
-  \label{fig:tcp-evasion}
-\end{figure}
 
 \paragraph{Detection holds over a long slow-cadence trace (E7b).}\label{sec:e7b}
 E7b runs the deployed gated build over a realistic deployment horizon:
@@ -1860,23 +1757,7 @@ ingestion rate (E11), session-override table capacity (E13), and the
 parser's sensitivity to MQTT-profile variations (E18).
 
 \paragraph{End-to-end latency is dominated by transport, not the ASIC (E14).}\label{sec:e14}
-\begin{figure*}[pos=htbp]
-  \centering
-  \includegraphics[width=0.88\textwidth]{figures/fig_detection_latency.pdf}
-  \caption{End-to-end detection latency on \EEightstochasticLatencyN{}
-  attack events from the stochastic experiment: (a)~histogram,
-  (b)~empirical CDF, (c)~per-stage box plot on log scale. Stage~1 = send
-  $\to$ digest arrival (generator + \tofino{} pipeline + gRPC transport);
-  stage~2 = digest arrival $\to$ controller decision (Python
-  arbitration); end-to-end = stage~1 + stage~2. Medians
-  29.5/4.5/\EEightstochasticLatencyMedianMs{}~ms; p95 values
-  41.8/4.8/\EEightstochasticLatencyPninefiveMs{}~ms. Latency is
-  restricted to attack events because the benign workload interposes
-  inter-trial state-reset barriers ($\sim$2.7~s) between trials; those
-  barriers are driver-side synchronization, not per-event detection
-  latency, so pooling them would overstate the on-path tail.}
-  \label{fig:latency}
-\end{figure*}
+
 The two-stage split (Fig.~\ref{fig:latency}, medians
 \EEightstochasticLatencyMedianMs{}~ms end-to-end) shows that
 \emph{``in-switch''} is not \emph{``in-switch latency''}: stage~1 (generator
@@ -1937,18 +1818,6 @@ largest window) with \EThirteenAggSrcSweepRejects{} rejects across
 by source-IP cardinality, typically 1--2 in a BESS fleet. The variant is a
 compile-time knob; the deployed default is the 5-tuple table characterised
 by T1.7, chosen for per-flow authorization isolation.
-
-\begin{figure}[pos=htbp]
-  \centering
-  \includegraphics[width=0.88\columnwidth]{figures/fig_override_capacity.pdf}
-  \caption{Override-table occupancy under source-IP aggregation (E13). Peak active
-  override-table entries versus offered source-IP cardinality at
-  500~pps per window, averaged over a 5~s TTL. Measurements fall exactly
-  on $y=x$: one table entry per distinct source IP, independent of
-  5-tuple fanout. Zero installs are rejected up to 200 source IPs in our
-  deployment pipeline.}
-  \label{fig:override_cap}
-\end{figure}
 
 \paragraph{Parser portability is bound to the reference framing (E18).}\label{sec:e18}
 E18 sweeps MQTT-level parameter variations (topic length, QoS level,
@@ -2417,65 +2286,6 @@ Unlike CPU-based IDS, the data-plane layer pays its cost in MAU stages,
 SRAM, and amortized switch hardware rather than in cores and watts.
 Table~\ref{tab:cost} collects the measured resource footprint.
 
-\begin{table*}[pos=htbp]
-  \centering
-  \caption{Tofino resource footprint of the evaluated build, with rough
-  comparison to a CPU-based alternative on the same traffic.
-  Dollar-per-BMS-year assumes a five-year amortization of a USD~20\,k
-  switch over a 50-unit fleet.}
-  \label{tab:cost}
-  \footnotesize
-  \begin{tabular}{@{}l l l@{}}
-    \toprule
-    Cost dimension & \otashield{} (\tofino{}) & Suricata (Xeon Gold) \\
-    \midrule
-    MAU stages used              & 12 of 12 (Table~\ref{tab:mau-resource}) & n/a \\
-    SRAM for rule state          & 3\,KB (R5 Bloom) + 0.5\,KB (R1) & host RAM \\
-    Session table (fleet-wide)   & 512\,KB (two 64\,K $\times$ 32\,bit) & host RAM \\
-    Power per Gb/s (amortized)   & $\sim$70\,mW/Gb/s         & $\sim$5\,W/Gb/s \\
-    Throughput headroom          & measured 2{,}200\,pps (generator-bound); ASIC 25\,Gb/s link, unmeasured & 40--60\,Gb/s~\cite{hu2019analysinghighspeed} \\
-    Hardware cost (list)         & \$20\,k (32$\times$100\,GbE) & \$8--12\,k server \\
-    \$/BMS-year (50-unit fleet)  & $\approx$\$80             & $\approx$\$40 \\
-    \bottomrule
-  \end{tabular}
-\end{table*}
-
-\begin{table*}[pos=htbp]
-  \centering
-  \caption{Per-component data-plane resource placement, extracted from the
-  deployed build's compiler output (the \texttt{context.json}/BFA of the
-  binary loaded by \texttt{bf\_switchd}). The pipeline occupies all 12
-  ingress MAU stages. ``Largest match table'' gives the dominant logical
-  table per component and its entry count; ``Stateful registers'' lists
-  the SALU-backed memory. Exact chip-relative SRAM/TCAM percentages
-  require the compiler's MAU resource log, which was not retained for the
-  deployed binary; we therefore report the authoritative allocation
-  counts.}
-  \label{tab:mau-resource}
-  \footnotesize
-  \begin{tabular}{@{}l l l l@{}}
-    \toprule
-    Component & Stage(s) & Largest match table (entries) & Stateful registers (entries) \\
-    \midrule
-    Parsing + topic match    & 0      & \texttt{topic\_prefix} (8)              & --- \\
-    Session manager          & 0--1   & \texttt{session\_id} (64\,K)            & \texttt{session\_bytes} (64\,K), \texttt{first\_ts} (64\,K), \texttt{coarse\_time} (1) \\
-    R2 unauthorized source   & 1      & \texttt{r2\_authorized\_sources} (16)   & --- \\
-    R5 fleet fanout          & 1--6   & \texttt{fleet\_monitor} (64\,K)         & \texttt{bf\_r0/r1/r2} ($3{\times}$1024), \texttt{r5\_count} (1) \\
-    BMS index map            & 5      & \texttt{bms\_ip\_to\_idx} (128)         & --- \\
-    R4 oversize              & 5--6   & \texttt{r4\_threshold} (range)          & shares \texttt{session\_bytes} \\
-    R1 replay                & 6--7   & \texttt{secondary\_rules} (256)         & \texttt{r1\_last\_seen} (256) \\
-    R6 rollback              & 6      & \texttt{rule\_r6\_rollback} (256)       & \texttt{r6\_bms\_max\_version} (256) \\
-    Policy engine            & 7--8   & \texttt{set\_src\_idx} (256)            & --- \\
-    Override + hold cascade  & 9--10  & \texttt{session\_action\_override} (256, 5-tuple) & \texttt{hold\_armed} (256) \\
-    Deparser digests         & 11     & $6{\times}$ learn-quantum digests       & --- \\
-    \midrule
-    \multicolumn{4}{@{}l}{\textbf{Whole pipeline:} 12 of 12 ingress stages;
-    76 PHV containers (23$\times$8\,b, 25$\times$16\,b, 28$\times$32\,b);
-    14 SALU units; 10 TCAM blocks; 10 map RAMs.} \\
-    \bottomrule
-  \end{tabular}
-\end{table*}
-
 Table~\ref{tab:mau-resource} gives the per-component placement extracted
 from the deployed build's compiler output. \otashield{} uses all 12
 ingress MAU stages; the long pole is the chain of dependent rule state
@@ -2588,12 +2398,17 @@ cross-protocol side-effect rule (R7) that correlates post-flash bursts
 in NTP, DNS, and DHCP within a short window is a further extension that
 would cover encrypted OTA channels whose payload we cannot parse.
 
-%% CRediT statement -- withheld for double-blind review
+%% CRediT statement (single-blind). TODO: add co-authors/advisors if any.
+\section*{CRediT authorship contribution statement}
+\textbf{Philip Akekudaga:} Conceptualization, Methodology, Software,
+Validation, Investigation, Data curation, Writing -- original draft,
+Writing -- review \& editing.
 
 %% Data availability (required)
 \section*{Data availability}
-Code and data will be released at an anonymized repository upon
-acceptance; URL withheld for double-blind review.
+The P4 source, controller, and evaluation aggregators are available at
+\url{https://github.com/akekulip/OTA-Shield}. Hardware-bound raw run logs and
+the live testbed are not redistributable (see the artifact README).
 
 %% Declaration of competing interests (required)
 \section*{Declaration of competing interests}
@@ -2823,6 +2638,188 @@ sweeps (E9, E21, E23, E20) probe variants the rules were not tuned against. The
 zero-FP bounds are event-count based; benign captures span roughly 3.5~min
 (E8, 600 events) and 25~min (E12, 450 events) plus the E12b soak. A multi-hour
 production soak~\cite{caselli2015specification} is future work.
+
+\section{Per-component resource placement}\label{app:mau}
+
+\begin{table*}[pos=htbp]
+  \centering
+  \caption{Per-component data-plane resource placement, extracted from the
+  deployed build's compiler output (the \texttt{context.json}/BFA of the
+  binary loaded by \texttt{bf\_switchd}). The pipeline occupies all 12
+  ingress MAU stages. ``Largest match table'' gives the dominant logical
+  table per component and its entry count; ``Stateful registers'' lists
+  the SALU-backed memory. Exact chip-relative SRAM/TCAM percentages
+  require the compiler's MAU resource log, which was not retained for the
+  deployed binary; we therefore report the authoritative allocation
+  counts.}
+  \label{tab:mau-resource}
+  \footnotesize
+  \begin{tabular}{@{}l l l l@{}}
+    \toprule
+    Component & Stage(s) & Largest match table (entries) & Stateful registers (entries) \\
+    \midrule
+    Parsing + topic match    & 0      & \texttt{topic\_prefix} (8)              & --- \\
+    Session manager          & 0--1   & \texttt{session\_id} (64\,K)            & \texttt{session\_bytes} (64\,K), \texttt{first\_ts} (64\,K), \texttt{coarse\_time} (1) \\
+    R2 unauthorized source   & 1      & \texttt{r2\_authorized\_sources} (16)   & --- \\
+    R5 fleet fanout          & 1--6   & \texttt{fleet\_monitor} (64\,K)         & \texttt{bf\_r0/r1/r2} ($3{\times}$1024), \texttt{r5\_count} (1) \\
+    BMS index map            & 5      & \texttt{bms\_ip\_to\_idx} (128)         & --- \\
+    R4 oversize              & 5--6   & \texttt{r4\_threshold} (range)          & shares \texttt{session\_bytes} \\
+    R1 replay                & 6--7   & \texttt{secondary\_rules} (256)         & \texttt{r1\_last\_seen} (256) \\
+    R6 rollback              & 6      & \texttt{rule\_r6\_rollback} (256)       & \texttt{r6\_bms\_max\_version} (256) \\
+    Policy engine            & 7--8   & \texttt{set\_src\_idx} (256)            & --- \\
+    Override + hold cascade  & 9--10  & \texttt{session\_action\_override} (256, 5-tuple) & \texttt{hold\_armed} (256) \\
+    Deparser digests         & 11     & $6{\times}$ learn-quantum digests       & --- \\
+    \midrule
+    \multicolumn{4}{@{}l}{\textbf{Whole pipeline:} 12 of 12 ingress stages;
+    76 PHV containers (23$\times$8\,b, 25$\times$16\,b, 28$\times$32\,b);
+    14 SALU units; 10 TCAM blocks; 10 map RAMs.} \\
+    \bottomrule
+  \end{tabular}
+\end{table*}
+
+\begin{figure}[pos=htbp]
+  \centering
+  \includegraphics[width=\columnwidth]{figures/fig_per_experiment.pdf}
+  \caption{Per-trial precision, recall, and F\textsubscript{1} across
+  the \EEightstochasticNTrials{} stochastic E8 trials, with the
+  F\textsubscript{1} bootstrap 95\% CI band shaded. The narrow
+  dispersion shows that stochastic performance stays close to the CI
+  interval reported for E8 in Table~\ref{tab:results}.}
+  \label{fig:per_exp}
+\end{figure}
+
+\section{Supplementary figures and tables}\label{app:supp}
+
+\begin{figure*}[pos=htbp]
+  \centering
+  \includegraphics[width=0.88\textwidth]{figures/fig_detection_latency.pdf}
+  \caption{End-to-end detection latency on \EEightstochasticLatencyN{}
+  attack events from the stochastic experiment: (a)~histogram,
+  (b)~empirical CDF, (c)~per-stage box plot on log scale. Stage~1 = send
+  $\to$ digest arrival (generator + \tofino{} pipeline + gRPC transport);
+  stage~2 = digest arrival $\to$ controller decision (Python
+  arbitration); end-to-end = stage~1 + stage~2. Medians
+  29.5/4.5/\EEightstochasticLatencyMedianMs{}~ms; p95 values
+  41.8/4.8/\EEightstochasticLatencyPninefiveMs{}~ms. Latency is
+  restricted to attack events because the benign workload interposes
+  inter-trial state-reset barriers ($\sim$2.7~s) between trials; those
+  barriers are driver-side synchronization, not per-event detection
+  latency, so pooling them would overstate the on-path tail.}
+  \label{fig:latency}
+\end{figure*}
+
+\begin{figure}[pos=htbp]
+  \centering
+  \includegraphics[width=0.88\columnwidth]{figures/fig_override_capacity.pdf}
+  \caption{Override-table occupancy under source-IP aggregation (E13). Peak active
+  override-table entries versus offered source-IP cardinality at
+  500~pps per window, averaged over a 5~s TTL. Measurements fall exactly
+  on $y=x$: one table entry per distinct source IP, independent of
+  5-tuple fanout. Zero installs are rejected up to 200 source IPs in our
+  deployment pipeline.}
+  \label{fig:override_cap}
+\end{figure}
+
+\begin{figure}[pos=htbp]
+  \centering
+  \includegraphics[width=0.85\columnwidth]{figures/fig_r5_boundary.pdf}
+  \caption{R5 sensitivity as a function of fanout size: P(R5 fires) grows
+  linearly above threshold 4, characterizing the rule's intrinsic counter.
+  On the deployed build R5's counter is r2-gated, so an authorized fanout
+  never fires R5 (\S\ref{sec:cascade-fix}); the authorized-rollout PASS
+  rate is 1.0 trivially, with no R5 fire to demote.}
+  \label{fig:r5}
+\end{figure}
+
+\begin{figure}[pos=htbp]
+  \centering
+  \includegraphics[width=0.92\columnwidth]{figures/F15_tcp_evasion.pdf}
+  \caption{TCP-segmentation evasion (E23): observed per-cell drop
+  rate over 10 trials/cell (250 trials), each cell reset-isolated; cell
+  text is observed rate (predicted in parens). Header-split evasions
+  defeat every rule including the source-keyed R2; only
+  \texttt{retransmit-dup} (intact PUBLISH on the wire) yields
+  parse-dependent detection, and only probabilistically. The R5 column
+  does not exercise genuine fanout (single-PUBLISH base attack) and is
+  shown for completeness.}
+  \label{fig:tcp-evasion}
+\end{figure}
+
+\begin{figure*}[pos=htbp]
+  \centering
+  \includegraphics[width=0.8\textwidth]{figures/testbed_topology.pdf}
+  \caption{Testbed topology. An OTA update server and a 50-unit BMS
+  fleet connect to a programmable switch through data-plane links
+  configured at 25\,Gb/s with RS-FEC (link capability; the experiments
+  in this paper do not offer traffic at that rate). A separate
+  management LAN carries control-plane gRPC traffic.}
+  \label{fig:testbed}
+\end{figure*}
+
+\begin{figure}[pos=htbp]
+  \centering
+  \includegraphics[width=0.92\columnwidth]{figures/F11_co_equal_headline.pdf}
+  \caption{The two headline numbers, shown co-equal on a common
+  $[0,1]$ scale: (a)~naive fleet-fanout detection
+  F\textsubscript{1}~=~\EEightstochasticFOneMean{} (E8) versus
+  (b)~adaptive-mimicry coverage \EOneSevenmimicryStrategyCatchPct\%
+  (E21). The headline applies to the designed naive family; an adversary
+  who reshapes cadence faces the right-hand number.}
+  \label{fig:co-equal}
+\end{figure}
+
+\begin{table}[pos=htbp]
+  \centering
+  \caption{Rule fires per mimicry strategy (E21) under
+  per-strategy isolation, summed over \EOneSevenmimicryNTrials{}
+  campaigns (\EOneSevenmimicryStrategyTotal{} attack events total).
+  Each strategy is designed to evade a specific data-plane rule;
+  ``caught'' counts events the controller dropped, ``missed'' counts
+  everything else. Under isolation, only \emph{R1-late} produces any
+  drop; every sub-threshold strategy evades entirely. Missed events
+  escape the data plane and would need control-plane or endpoint
+  recovery.}
+  \label{tab:mimicry}
+  \footnotesize
+  \begin{tabular}{@{}l r r r r r r r@{}}
+    \toprule
+    Strategy & N & R1 & R2 & R4 & R5 & caught & missed \\
+    \midrule
+    fanout-sub    & 720 &  0 &  0 &  0 &  0 &  0 & 720 \\
+    fanout-three  & 540 &  0 &  0 &  0 &  0 &  0 & 540 \\
+    R4-deadzone   &  90 &  0 &  0 &  0 &  0 &  0 &  90 \\
+    combined      & 360 &  0 &  0 &  0 &  0 &  0 & 360 \\
+    R1-late       &  60 & 30 &  0 &  0 &  0 & 30 &  30 \\
+    \midrule
+    Total         &\EOneSevenmimicryStrategyTotal{}& 30 & 0 & 0 & 0
+                  &\EOneSevenmimicryStrategyCaught{}
+                  &\EOneSevenmimicryStrategyMissed{} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{table*}[pos=htbp]
+  \centering
+  \caption{Tofino resource footprint of the evaluated build, with rough
+  comparison to a CPU-based alternative on the same traffic.
+  Dollar-per-BMS-year assumes a five-year amortization of a USD~20\,k
+  switch over a 50-unit fleet.}
+  \label{tab:cost}
+  \footnotesize
+  \begin{tabular}{@{}l l l@{}}
+    \toprule
+    Cost dimension & \otashield{} (\tofino{}) & Suricata (Xeon Gold) \\
+    \midrule
+    MAU stages used              & 12 of 12 (Table~\ref{tab:mau-resource}) & n/a \\
+    SRAM for rule state          & 3\,KB (R5 Bloom) + 0.5\,KB (R1) & host RAM \\
+    Session table (fleet-wide)   & 512\,KB (two 64\,K $\times$ 32\,bit) & host RAM \\
+    Power per Gb/s (amortized)   & $\sim$70\,mW/Gb/s         & $\sim$5\,W/Gb/s \\
+    Throughput headroom          & measured 2{,}200\,pps (generator-bound); ASIC 25\,Gb/s link, unmeasured & 40--60\,Gb/s~\cite{hu2019analysinghighspeed} \\
+    Hardware cost (list)         & \$20\,k (32$\times$100\,GbE) & \$8--12\,k server \\
+    \$/BMS-year (50-unit fleet)  & $\approx$\$80             & $\approx$\$40 \\
+    \bottomrule
+  \end{tabular}
+\end{table*}
 
 {\footnotesize
 \setlength{\bibsep}{1pt plus 0.2ex}
