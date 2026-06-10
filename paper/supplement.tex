@@ -57,10 +57,15 @@
 \setcounter{section}{0}\setcounter{table}{0}\setcounter{figure}{0}
 
 \shorttitle{Supplementary material: \otashield}
-\shortauthors{Akekudaga}
-\title[mode=title]{Supplementary Material for \otashield: A Hardware-Measured Reference Architecture for In-Network OTA Rollout Admission and Bounded Firmware-Attack Detection in Battery Energy Storage Systems}
+\shortauthors{Akekudaga et~al.}
+\title[mode=title]{Supplementary Material for \otashield: Hardware-Measured In-Network Admission and Bounded Attack Detection for BESS OTA Firmware Rollouts}
 \author[1]{Philip Akekudaga}
+%% TODO: provide Simon's affiliation.
+\author[2]{Simon Wewoliamo Kuseh}
+\author[3]{Mubarak Hussein}
 \affiliation[1]{organization={University of Rhode Island}, city={Kingston}, state={RI}, country={USA}}
+\affiliation[2]{organization={Affiliation to be provided}}
+\affiliation[3]{organization={University at Albany, SUNY}, city={Albany}, state={NY}, country={USA}}
 \begin{abstract}
 This document provides supplementary figures, tables, and methodological detail supporting the main paper: per-trial results, the first-contact recall taxonomy, build provenance, the statistical methodology, per-component resource placement, and the boundary and capacity floats referenced from the evaluation.
 \end{abstract}
@@ -68,106 +73,6 @@ This document provides supplementary figures, tables, and methodological detail 
 Supplementary material
 \end{keywords}
 \maketitle
-
-\section{E8 per-trial results}\label{app:e8-per-trial}
-
-Table~\ref{tab:e8-per-trial} reports the raw per-trial outcomes for the
-20 E8 stochastic trials summarized in \S\ref{sec:e8}. Across 20 trials
-the detector produces $F_1 = 0.9962 \pm 0.0075$ (mean $\pm$ stdev; range
-$[0.9744, 1.0000]$), with dispersion concentrated in three trials that
-miss one to three of 60 attack events. Precision is exactly $1.0$ on
-every trial. These numbers underlie the aggregated
-\texttt{\EEightstochasticFOneMean{}} [\texttt{\EEightstochasticFOneCIlo{}},
-\texttt{\EEightstochasticFOneCIhi{}}] result reported in the body;
-readers who want to assess dispersion directly rather than rely on the
-bootstrap CI can do so from this table.
-
-\begin{table}[pos=htbp]
-  \centering
-  \caption{Per-trial confusion-matrix counts and derived metrics (E8).
-  TP/FN/FP/TN are raw event counts; precision, recall, and F1 are
-  derived per-trial.}
-  \label{tab:e8-per-trial}
-  \scriptsize
-  \setlength{\tabcolsep}{4pt}
-  \begin{tabular}{@{}r r r r r r r r@{}}
-    \toprule
-    Trial & TP & FN & FP & TN & Prec. & Rec. & F1 \\
-    \midrule
-     1 & 59 & 1 & 0 & 30 & 1.0000 & 0.9833 & 0.9916 \\
-     2 & 60 & 0 & 0 & 30 & 1.0000 & 1.0000 & 1.0000 \\
-     3 & 60 & 0 & 0 & 30 & 1.0000 & 1.0000 & 1.0000 \\
-     4 & 60 & 0 & 0 & 30 & 1.0000 & 1.0000 & 1.0000 \\
-     5 & 60 & 0 & 0 & 30 & 1.0000 & 1.0000 & 1.0000 \\
-     6 & 60 & 0 & 0 & 30 & 1.0000 & 1.0000 & 1.0000 \\
-     7 & 60 & 0 & 0 & 30 & 1.0000 & 1.0000 & 1.0000 \\
-     8 & 60 & 0 & 0 & 30 & 1.0000 & 1.0000 & 1.0000 \\
-     9 & 57 & 3 & 0 & 30 & 1.0000 & 0.9500 & 0.9744 \\
-    10 & 58 & 2 & 0 & 30 & 1.0000 & 0.9667 & 0.9831 \\
-    11 & 60 & 0 & 0 & 30 & 1.0000 & 1.0000 & 1.0000 \\
-    12 & 58 & 2 & 0 & 30 & 1.0000 & 0.9667 & 0.9831 \\
-    13 & 60 & 0 & 0 & 30 & 1.0000 & 1.0000 & 1.0000 \\
-    14 & 59 & 1 & 0 & 30 & 1.0000 & 0.9833 & 0.9916 \\
-    15 & 60 & 0 & 0 & 30 & 1.0000 & 1.0000 & 1.0000 \\
-    16 & 60 & 0 & 0 & 30 & 1.0000 & 1.0000 & 1.0000 \\
-    17 & 60 & 0 & 0 & 30 & 1.0000 & 1.0000 & 1.0000 \\
-    18 & 60 & 0 & 0 & 30 & 1.0000 & 1.0000 & 1.0000 \\
-    19 & 60 & 0 & 0 & 30 & 1.0000 & 1.0000 & 1.0000 \\
-    20 & 60 & 0 & 0 & 30 & 1.0000 & 1.0000 & 1.0000 \\
-    \midrule
-    mean & 59.55 & 0.45 & 0.0 & 30.0 & 1.0000 & 0.9925 & 0.9962 \\
-    stdev &  0.89 & 0.89 & 0.0 & 0.00 & 0.0000 & 0.0148 & 0.0075 \\
-    \bottomrule
-  \end{tabular}
-\end{table}
-
-\section{\Enineteenp{} first-contact recall taxonomy}\label{app:e19p-firstcontact}
-
-Rollback detection (R6) requires a prior authenticated reference version
-for the targeted BMS: an attack packet to a device with no established
-baseline produces a no-decision (ND) rather than a HOLD, because R6 has
-no high-water mark to compare against. When a trial's Phase-1 baseline
-covers fewer devices than the attack set targets, the uncovered devices
-have no stored version, so attack packets to them generate a parse-level
-digest rather than a HOLD digest and the controller makes no decision.
-This is a fundamental property of a version-monotonicity detector, not a
-tuning artifact. We report two recall framings on the deployed gated
-build (\EOneNineprollbackstochasticEventAttack{} rollback attacks across
-\EOneNineprollbackstochasticNTrials{} trials; the detector drops
-\EOneNineprollbackstochasticEventTP{} of them):
-
-\begin{description}
-  \item[Framing~(i), ND-excluded (lenient).] Recall over attack events on
-    devices with an established Phase-1 baseline:
-    $\EOneNineprollbackstochasticEventTP{}/406 =
-    \EOneNineprollbackstochasticRecallLenientMean{}$ (Wilson 95\% CI
-    $[\EOneNineprollbackstochasticRecallLenientCIlo{},
-    \EOneNineprollbackstochasticRecallLenientCIhi{}]$). This matches the
-    detector's stated operating condition, a BMS whose baseline R6 has
-    already recorded. The \EOneNineprollbackstochasticEventFN{} reachable
-    misses are rollbacks that reached the controller but were not dropped.
-  \item[Framing~(ii), strict (headline).] Counting the
-    \EOneNineprollbackstochasticFirstContact{} first-contact ND events as
-    false negatives:
-    $\EOneNineprollbackstochasticEventTP{}/\EOneNineprollbackstochasticEventAttack{}
-    = \EOneNineprollbackstochasticRecallMean{}$ (Wilson 95\% CI
-    $[\EOneNineprollbackstochasticRecallCIlo{},
-    \EOneNineprollbackstochasticRecallCIhi{}]$). This is the figure we
-    headline, treating any undetected attack packet as a miss regardless
-    of first-contact status, per evaluation-integrity guidance for
-    security detectors~\cite{pendlebury2019tesseract,arp2022dosdonts}.
-\end{description}
-
-\noindent The first-contact ND rate is
-$\EOneNineprollbackstochasticFirstContact{}/\EOneNineprollbackstochasticEventAttack{}$.
-Precision is \EOneNineprollbackstochasticPrecisionMean{} with zero benign
-false positives across \EOneNineprollbackstochasticEventLegit{}
-legitimate events (\S\ref{sec:e19p}). The un-gated build's apparent
-near-perfect recall was an artifact of the \texttt{hold\_armed\_reg}
-cascade incidentally dropping first-contact rollbacks; on the deployed
-gated build that cascade is inert (\S\ref{sec:cascade-fix}), so the
-cold-start misses surface as the gap between strict and lenient
-recall.
 
 \section{Build provenance and the R5-gating revision}\label{app:build-provenance}
 
@@ -246,92 +151,6 @@ source-IP aggregation variant. E7b was re-run on the deployed gated build
 (\S\ref{sec:e7b}): over the 8~h trace it records 0 benign false positives
 and catches all 100 rollback attacks, so it now reports on the deployed
 binary rather than an un-gated auxiliary run.
-
-\section{Statistical methodology}\label{app:stats}
-
-Deterministic experiments (E1, E4, E5, E6) repeat a fixed computation and are
-reported without CIs. Stochastic experiments report 95\% CIs from a trial-level
-percentile bootstrap: per-trial point estimates are resampled with replacement
-over the $n$ trials ($B=2\,000$ replicates, $\alpha=0.05$); a degenerate
-resample distribution (all trials identical) is reported as the point estimate
-with the Clopper--Pearson one-sided bound instead.\label{sec:cluster-bootstrap}
-For E8 precision, FP~$=$~0 across 20 trials / 600 benign events, so the bootstrap
-CI compresses to $[1.000,1.000]$ and is replaced by the Clopper--Pearson 95\%
-upper bound $\leq\RuleOfThreeSixHundred{}\%$ (=~3/600); E12 uses
-$\leq\RuleOfThreeFourFifty{}\%$. These are correctness runs, not independent
-significance tests, so a Bonferroni correction is inappropriate.
-
-\Enineteenp{} (\EOneNineprollbackstochasticNTrials{}~trials,
-\EOneNineprollbackstochasticEventTotal{}~events:
-\EOneNineprollbackstochasticEventAttack{} rollback attacks,
-\EOneNineprollbackstochasticEventLegit{} legitimate) yields zero benign false
-positives (precision \EOneNineprollbackstochasticPrecisionMean{}, Wilson 95\% CI
-[\EOneNineprollbackstochasticPrecisionCIlo{},
-\EOneNineprollbackstochasticPrecisionCIhi{}]). Its between-trial variance lives
-in recall, because a stochastic share of rollbacks are first-contact events R6
-cannot catch on a version it has never seen (\S\ref{sec:cascade-fix}): strict
-recall counts them (\EOneNineprollbackstochasticRecallMean{}, Wilson 95\% CI
-[\EOneNineprollbackstochasticRecallCIlo{},
-\EOneNineprollbackstochasticRecallCIhi{}]), the lenient figure excludes them
-(\EOneNineprollbackstochasticRecallLenientMean{}).
-
-To guard against the inflated-score failure mode of learned ICS
-detectors~\cite{kus2022falsesense}, the benign test set contains unusual but
-legitimate events (emergency hotfix re-pushes, mid-rollout source migration,
-delayed-retry bursts, an authorized fleet rollback in E12), and the adversarial
-sweeps (E9, E21, E23, E20) probe variants the rules were not tuned against. The
-zero-FP bounds are event-count based; benign captures span roughly 3.5~min
-(E8, 600 events) and 25~min (E12, 450 events) plus the E12b soak. A multi-hour
-production soak~\cite{caselli2015specification} is future work.
-
-\section{Per-component resource placement}\label{app:mau}
-
-\begin{table*}[pos=htbp]
-  \centering
-  \caption{Per-component data-plane resource placement, extracted from the
-  deployed build's compiler output (the \texttt{context.json}/BFA of the
-  binary loaded by \texttt{bf\_switchd}). The pipeline occupies all 12
-  ingress MAU stages. ``Largest match table'' gives the dominant logical
-  table per component and its entry count; ``Stateful registers'' lists
-  the SALU-backed memory. Exact chip-relative SRAM/TCAM percentages
-  require the compiler's MAU resource log, which was not retained for the
-  deployed binary; we therefore report the authoritative allocation
-  counts.}
-  \label{tab:mau-resource}
-  \footnotesize
-  \begin{tabular}{@{}l l l l@{}}
-    \toprule
-    Component & Stage(s) & Largest match table (entries) & Stateful registers (entries) \\
-    \midrule
-    Parsing + topic match    & 0      & \texttt{topic\_prefix} (8)              & --- \\
-    Session manager          & 0--1   & \texttt{session\_id} (64\,K)            & \texttt{session\_bytes} (64\,K), \texttt{first\_ts} (64\,K), \texttt{coarse\_time} (1) \\
-    R2 unauthorized source   & 1      & \texttt{r2\_authorized\_sources} (16)   & --- \\
-    R5 fleet fanout          & 1--6   & \texttt{fleet\_monitor} (64\,K)         & \texttt{bf\_r0/r1/r2} ($3{\times}$1024), \texttt{r5\_count} (1) \\
-    BMS index map            & 5      & \texttt{bms\_ip\_to\_idx} (128)         & --- \\
-    R4 oversize              & 5--6   & \texttt{r4\_threshold} (range)          & shares \texttt{session\_bytes} \\
-    R1 replay                & 6--7   & \texttt{secondary\_rules} (256)         & \texttt{r1\_last\_seen} (256) \\
-    R6 rollback              & 6      & \texttt{rule\_r6\_rollback} (256)       & \texttt{r6\_bms\_max\_version} (256) \\
-    Policy engine            & 7--8   & \texttt{set\_src\_idx} (256)            & --- \\
-    Override + hold cascade  & 9--10  & \texttt{session\_action\_override} (256, 5-tuple) & \texttt{hold\_armed} (256) \\
-    Deparser digests         & 11     & $6{\times}$ learn-quantum digests       & --- \\
-    \midrule
-    \multicolumn{4}{@{}l}{\textbf{Whole pipeline:} 12 of 12 ingress stages;
-    76 PHV containers (23$\times$8\,b, 25$\times$16\,b, 28$\times$32\,b);
-    14 SALU units; 10 TCAM blocks; 10 map RAMs.} \\
-    \bottomrule
-  \end{tabular}
-\end{table*}
-
-\begin{figure}[pos=htbp]
-  \centering
-  \includegraphics[width=\columnwidth]{figures/fig_per_experiment.pdf}
-  \caption{Per-trial precision, recall, and F\textsubscript{1} across
-  the \EEightstochasticNTrials{} stochastic E8 trials, with the
-  F\textsubscript{1} bootstrap 95\% CI band shaded. The narrow
-  dispersion shows that stochastic performance stays close to the CI
-  interval reported for E8 in Table~\ref{tab:results}.}
-  \label{fig:per_exp}
-\end{figure}
 
 \section{Supplementary figures and tables}\label{app:supp}
 
@@ -468,47 +287,6 @@ production soak~\cite{caselli2015specification} is future work.
     \bottomrule
   \end{tabular}
 \end{table*}
-
-\begin{figure*}[pos=htbp]
-  \centering
-  \includegraphics[width=0.88\textwidth]{figures/fig_detection_latency.pdf}
-  \caption{End-to-end detection latency on \EEightstochasticLatencyN{}
-  attack events from the stochastic experiment: (a)~histogram,
-  (b)~empirical CDF, (c)~per-stage box plot on log scale. Stage~1 = send
-  $\to$ digest arrival (generator + \tofino{} pipeline + gRPC transport);
-  stage~2 = digest arrival $\to$ controller decision (Python
-  arbitration); end-to-end = stage~1 + stage~2. Medians
-  29.5/4.5/\EEightstochasticLatencyMedianMs{}~ms; p95 values
-  41.8/4.8/\EEightstochasticLatencyPninefiveMs{}~ms. Latency is
-  restricted to attack events because the benign workload interposes
-  inter-trial state-reset barriers ($\sim$2.7~s) between trials; those
-  barriers are driver-side synchronization, not per-event detection
-  latency, so pooling them would overstate the on-path tail.}
-  \label{fig:latency}
-\end{figure*}
-
-\begin{figure}[pos=htbp]
-  \centering
-  \includegraphics[width=0.88\columnwidth]{figures/fig_override_capacity.pdf}
-  \caption{Override-table occupancy under source-IP aggregation (E13). Peak active
-  override-table entries versus offered source-IP cardinality at
-  500~pps per window, averaged over a 5~s TTL. Measurements fall exactly
-  on $y=x$: one table entry per distinct source IP, independent of
-  5-tuple fanout. Zero installs are rejected up to 200 source IPs in our
-  deployment pipeline.}
-  \label{fig:override_cap}
-\end{figure}
-
-\begin{figure}[pos=htbp]
-  \centering
-  \includegraphics[width=0.85\columnwidth]{figures/fig_r5_boundary.pdf}
-  \caption{R5 sensitivity as a function of fanout size: P(R5 fires) grows
-  linearly above threshold 4, characterizing the rule's intrinsic counter.
-  On the deployed build R5's counter is r2-gated, so an authorized fanout
-  never fires R5 (\S\ref{sec:cascade-fix}); the authorized-rollout PASS
-  rate is 1.0 trivially, with no R5 fire to demote.}
-  \label{fig:r5}
-\end{figure}
 
 \begin{figure}[pos=htbp]
   \centering
