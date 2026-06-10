@@ -76,8 +76,8 @@
 
 \author[1]{Philip Akekudaga}
 \cormark[1]
-%% TODO (author to confirm at camera-ready): email, ORCID, and any co-authors/advisors.
-% \ead{<corresponding-email>}
+%% TODO: replace with institutional email + add ORCID if available.
+\ead{akekulip@gmail.com}
 \affiliation[1]{organization={University of Rhode Island},
   city={Kingston}, state={RI}, country={USA}}
 \cortext[1]{Corresponding author.}
@@ -475,6 +475,56 @@ platform, domain, threat model, policy model, stateful scope, and
 evaluation rigor; Table~\ref{tab:bui-compare} marks the six axes. None
 of this prior work targets OTA firmware attacks on grid
 infrastructure.\label{sec:related-bui}
+
+\begin{table}[pos=htbp]
+  \centering
+  \caption{Axis-by-axis comparison with Bui et
+  al.~\cite{binh2026p4mqtt}.}
+  \label{tab:bui-compare}
+  \footnotesize
+  \begin{tabular}{@{}p{0.20\columnwidth}p{0.32\columnwidth}p{0.36\columnwidth}@{}}
+    \toprule
+    \textbf{Axis} & \textbf{Bui et al.} & \textbf{\otashield{}} \\
+    \midrule
+    Target platform
+      & BMv2 software reference; no MAU budget or PHV layout
+        constraints.
+      & \tofino{} hardware; reports measured layout against the
+        12-stage MAU budget, 48-byte digest quantum, and register
+        restrictions (\S\ref{sec:design}). \\
+    \addlinespace
+    Target domain
+      & Generic edge-IoT MQTT anomalies.
+      & BESS firmware distribution on a grid-operator path
+        (\S\ref{sec:background}). \\
+    \addlinespace
+    Threat model
+      & Endpoint compromise and topic-ACL abuse.
+      & Channel compromise with valid signing material and authorized
+        topics, fleet-coordinated campaigns. \\
+    \addlinespace
+    Policy model
+      & Stateless topic-prefix authorization.
+      & RAT with Gate~A and Gate~B arbitration
+        (Alg.~\ref{alg:rat-gate}) over per-BMS rollout context. \\
+    \addlinespace
+    Stateful scope
+      & Session-level flow state.
+      & Per-BMS version high-water (R6) and Bloom-gated fleet-fanout
+        counter (R5). \\
+    \addlinespace
+    Evaluation rigor
+      & 99.8\% enforcement on software-timed BMv2.
+      & Hardware latency (median
+        $\approx$\EEightstochasticLatencyMedianMs{}\,ms,
+        p95~$\approx$\EEightstochasticLatencyPninefiveMs{}\,ms),
+        bootstrap F1 CIs over 20 stochastic trials, ablation
+        (\S\ref{sec:e4}), adversarial-boundary sweep (\S\ref{sec:e9}),
+        Suricata/Zeek baseline on identical traffic
+        (\S\ref{sec:e10}). \\
+    \bottomrule
+  \end{tabular}
+\end{table}
 
 \paragraph{OTA firmware security and BESS prior work.}
 This line of work secures the firmware after it arrives, which leaves
@@ -949,6 +999,17 @@ Table~\ref{tab:results} indexes every experiment to the RQ it supports
 and to the subsection in which it is reported.
 
 \subsection{Testbed}\label{sec:testbed}
+
+\begin{figure*}[pos=htbp]
+  \centering
+  \includegraphics[width=0.8\textwidth]{figures/testbed_topology.pdf}
+  \caption{Testbed topology. An OTA update server and a 50-unit BMS
+  fleet connect to a programmable switch through data-plane links
+  configured at 25\,Gb/s with RS-FEC (link capability; the experiments
+  in this paper do not offer traffic at that rate). A separate
+  management LAN carries control-plane gRPC traffic.}
+  \label{fig:testbed}
+\end{figure*}
 
 The testbed (Fig.~\ref{fig:testbed}) consists of two commodity servers
 bridged by a programmable switch. One server is the OTA update server,
@@ -2239,9 +2300,10 @@ Writing -- review \& editing.
 
 %% Data availability (required)
 \section*{Data availability}
-The P4 source, controller, and evaluation aggregators are available at
-\url{https://github.com/akekulip/OTA-Shield}. Hardware-bound raw run logs and
-the live testbed are not redistributable (see the artifact README).
+The P4 source, controller, and evaluation aggregators are openly available
+(Akekudaga, 2026) at \url{https://github.com/akekulip/OTA-Shield}. The
+multi-hour hardware run logs and the live testbed are not redistributable; the
+artifact README documents what can be reproduced.
 
 %% Declaration of competing interests (required)
 \section*{Declaration of competing interests}
@@ -2251,12 +2313,15 @@ influence the work reported in this paper.
 
 %% AI disclosure (required by Elsevier 2024 policy)
 \section*{Declaration of generative AI and AI-assisted technologies in the writing process}
-The author used AI-assisted coding tools to draft code and AI for basic
-grammar correction. The author reviewed and edited all output and takes
-full responsibility for the publication.
+During the preparation of this work the author used Claude (Anthropic) to
+assist with code drafting and with language editing (grammar and phrasing).
+After using this tool, the author reviewed and edited the content as needed and
+takes full responsibility for the content of the publication.
 
 \FloatBarrier
 \appendix
+\counterwithin{table}{section}
+\counterwithin{figure}{section}
 \section{E8 per-trial results}\label{app:e8-per-trial}
 
 Table~\ref{tab:e8-per-trial} reports the raw per-trial outcomes for the
@@ -2558,57 +2623,6 @@ production soak~\cite{caselli2015specification} is future work.
 
 \begin{table}[pos=htbp]
   \centering
-  \caption{Axis-by-axis comparison with Bui et
-  al.~\cite{binh2026p4mqtt}.}
-  \label{tab:bui-compare}
-  \footnotesize
-  \begin{tabular}{@{}p{0.20\columnwidth}p{0.32\columnwidth}p{0.36\columnwidth}@{}}
-    \toprule
-    \textbf{Axis} & \textbf{Bui et al.} & \textbf{\otashield{}} \\
-    \midrule
-    Target platform
-      & BMv2 software reference; no MAU budget or PHV layout
-        constraints.
-      & \tofino{} hardware; reports measured layout against the
-        12-stage MAU budget, 48-byte digest quantum, and register
-        restrictions (\S\ref{sec:design}). \\
-    \addlinespace
-    Target domain
-      & Generic edge-IoT MQTT anomalies.
-      & BESS firmware distribution on a grid-operator path
-        (\S\ref{sec:background}). \\
-    \addlinespace
-    Threat model
-      & Endpoint compromise and topic-ACL abuse.
-      & Channel compromise with valid signing material and authorized
-        topics, fleet-coordinated campaigns. \\
-    \addlinespace
-    Policy model
-      & Stateless topic-prefix authorization.
-      & RAT with Gate~A and Gate~B arbitration
-        (Alg.~\ref{alg:rat-gate}) over per-BMS rollout context. \\
-    \addlinespace
-    Stateful scope
-      & Session-level flow state.
-      & Per-BMS version high-water (R6) and Bloom-gated fleet-fanout
-        counter (R5). \\
-    \addlinespace
-    Evaluation rigor
-      & 99.8\% enforcement on software-timed BMv2.
-      & Hardware latency (median
-        $\approx$\EEightstochasticLatencyMedianMs{}\,ms,
-        p95~$\approx$\EEightstochasticLatencyPninefiveMs{}\,ms),
-        bootstrap F1 CIs over 20 stochastic trials, ablation
-        (\S\ref{sec:e4}), adversarial-boundary sweep (\S\ref{sec:e9}),
-        Suricata/Zeek baseline on identical traffic
-        (\S\ref{sec:e10}). \\
-    \bottomrule
-  \end{tabular}
-\end{table}
-
-
-\begin{table}[pos=htbp]
-  \centering
   \caption{Reference-channel parser portability (E18) across the
   \EeighteenMfourVariants{}-variant MQTT-parameter sweep on the deployed
   parser. PARSED = the parser extracted a valid OTA header; PARSER-MISS =
@@ -2763,17 +2777,6 @@ production soak~\cite{caselli2015specification} is future work.
   \label{fig:tcp-evasion}
 \end{figure}
 
-\begin{figure*}[pos=htbp]
-  \centering
-  \includegraphics[width=0.8\textwidth]{figures/testbed_topology.pdf}
-  \caption{Testbed topology. An OTA update server and a 50-unit BMS
-  fleet connect to a programmable switch through data-plane links
-  configured at 25\,Gb/s with RS-FEC (link capability; the experiments
-  in this paper do not offer traffic at that rate). A separate
-  management LAN carries control-plane gRPC traffic.}
-  \label{fig:testbed}
-\end{figure*}
-
 \begin{figure}[pos=htbp]
   \centering
   \includegraphics[width=0.92\columnwidth]{figures/F11_co_equal_headline.pdf}
@@ -2842,6 +2845,7 @@ production soak~\cite{caselli2015specification} is future work.
 {\footnotesize
 \setlength{\bibsep}{1pt plus 0.2ex}
 \bibliographystyle{unsrtnat}
+\clearpage
 \bibliography{references}
 }
 
