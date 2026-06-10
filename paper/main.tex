@@ -47,7 +47,6 @@
 % which rendered/extracted as "E190"). Text superscript prime renders cleanly.
 \newcommand{\Enineteenp}{\texorpdfstring{E19\textsuperscript{\textquotesingle}}{E19'}}
 
-\usepackage{xr-hyper}\externaldocument{supplement}
 \begin{document}
 \let\WriteBookmarks\relax
 
@@ -692,7 +691,7 @@ Packets with \texttt{action\_code} $\neq$ 0 generate a
 \texttt{hold\_digest} (28~bytes, well under \tofino{}'s 48-byte learn
 quantum) carrying the 5-tuple, session ID, BMS index, all five
 rule-fire flags, and the OTA version and size. The controller compares
-this digest against the RAT manifest (Supplementary Table~\ref{tab:rat}); a match
+this digest against the RAT manifest; a match
 installs a \texttt{session\_allow} override, a miss installs
 \texttt{session\_deny}. Both expire via a 5-second timer, giving
 fail-closed recovery if the controller stalls. Because the digest carries
@@ -908,7 +907,7 @@ E10 positions the design against CPU IDS baselines on identical traffic,
 showing the contribution is architecture and resource placement, not P4-only
 detectability. Support and boundary experiments are summarized in
 Table~\ref{tab:results} and discussed in the main text only where they change
-interpretation; the \emph{Role} column marks each one. Supplementary figures, tables, and methodological detail (per-trial results, the first-contact recall taxonomy, build provenance, statistical methods, and per-component resource placement) are provided in the supplementary material. The coverage map
+interpretation; the \emph{Role} column marks each one. The coverage map
 (Table~\ref{tab:coverage}) ties each contribution to its evidence and its
 measured boundary.
 
@@ -1156,7 +1155,7 @@ sample size was chosen so that the bootstrap CI half-width for
 F\textsubscript{1} is below 0.01, verified by plotting CI width as a
 function of trial count from~5 to~20; the width plateaus by trial~15.
 Per-trial F\textsubscript{1} dispersion is tight (interquartile range
-within the CI, Supplementary Fig.~\ref{fig:per_exp}), consistent with the low
+within the CI), consistent with the low
 missed-event rate on this workload; the pooled confusion matrix is
 Fig.~\ref{fig:cm}. E8's attack mix inherits E1's composition (30 R1 rapid-replay
 events from the authorized source and 30~R2 unauthorized-source events per
@@ -1166,7 +1165,7 @@ unauthorized source, and R6 rollback are exercised in separate experiments
 R1 rapid-replay and R2 unauthorized-source families at stochastic scale on
 the 50-unit testbed; fleet-scaling
 precision at 200~BMS is reported separately in S1/S2
-(Supplementary Table~\ref{tab:fleet-scaling}, \S\ref{sec:e1prime}).
+(\S\ref{sec:e1prime}).
 
 \begin{figure}[pos=htbp]
   \centering
@@ -1405,8 +1404,7 @@ arbiter's value is in admission (E12, E19), not attack precision.
 rule's threshold can escape the data plane:
 \EOneSevenmimicryStrategyCaught{}/\EOneSevenmimicryStrategyTotal{}
 (\EOneSevenmimicryStrategyCatchPct\%) of mimicry events are dropped, and
-the residual blind zones are reported per rule below
-(Supplementary Fig.~\ref{fig:co-equal}).}
+the residual blind zones are reported per rule below.}
 
 RQ3 asks how each rule degrades when an adversary is free to choose
 attack parameters near the rule's detection boundary or to slow-play an
@@ -1470,8 +1468,7 @@ range-match dead zone so R4 does not fire; (iv) \emph{combined} mixes
 sub-threshold fanout with the R4 dead zone; (v) \emph{R1 late-replay}
 re-hits the same BMS with a second replay in each pair.
 
-The per-strategy fire counts and detection rates are in
-Supplementary Table~\ref{tab:mimicry}. R5 fires on zero
+The per-strategy fire counts and detection rates follow. R5 fires on zero
 of the 720 fanout-sub and 540 fanout-three events,
 confirming the sub-threshold-fanout blind zone on the hardware; R4 fires
 on zero of the 90 dead-zone events, confirming the range-match blind
@@ -1499,8 +1496,7 @@ reassembly. We measure the consequence directly with a $5\times5$
 battery: five segmentation evasions against the five header-dependent
 rules, 10 trials per cell (250 trials), each cell emitted after a
 controller reset so the outcome is attributable to the cell's own rule.
-Figure~\ref{fig:tcp-evasion} reports the observed per-cell drop rate. The
-three \emph{header-split} evasions (\texttt{split-mqtt-fh},
+Across the battery the three \emph{header-split} evasions (\texttt{split-mqtt-fh},
 \texttt{split-topic}, \texttt{split-ota-hdr}) cut the single
 OTA-carrying PUBLISH across two segments so that no segment presents a
 parseable header; all three evade \emph{every} rule, including the
@@ -1572,7 +1568,7 @@ We captured a PCAP of a single E1 trial (\EtenSuricataNDecisions{}~events:
 configurations plus one apples-to-apples combination. R6 is omitted from
 this mapping because the E1 PCAP contains no version-rollback events;
 the R6 evaluation is reported separately in E19.
-Supplementary Table~\ref{tab:e10variants} collects the six variants; the text below
+The text below summarizes the six baseline variants;
 summarizes the arbitration gap they expose.
 
 Variant (i) maps R1, R2, R4, R5 to the closest Suricata~7.0.3 primitive
@@ -1778,7 +1774,7 @@ reference-channel assumptions. This is a scoping result rather than a
 portability claim: it does not show that the construction ports to an
 arbitrary MQTT profile, only that deviations from the reference framing
 require per-channel re-engineering of the parser.
-Supplementary Table~\ref{tab:e18} reports the observed pipeline outcome per variant in
+the portability sweep reports the observed pipeline outcome per variant in
 the core MQTT-parameter sweep.
 
 The deployed parser parses every variant that keeps the 32-byte topic
@@ -1970,7 +1966,7 @@ because R5's counter is gated on \texttt{r2\_fired} behind the terminal R2
 drop, the gate does not arm on any reachable input and is inert; this is
 why E12 and \Enineteenp{} report zero benign false positives. (An earlier
 build armed the gate on any rule fire, which is the configuration recorded
-in Supplementary Sec.~\ref{app:build-provenance}.) The 256-bucket index remains a
+in Appendix~\ref{app:build-provenance}.) The 256-bucket index remains a
 latent limitation
 for any future build that re-arms the gate on unauthorized fanout: at 10
 to 50 concurrent sources, birthday collisions would make it unreliable as
@@ -2152,14 +2148,15 @@ real-time threshold adaptation.
 \subsection{Composing \otashield{} with endpoint and operator-side defenses}\label{sec:compose}
 
 \otashield{} is one layer in a defense-in-depth stack, not a standalone
-detector. Supplementary Table~\ref{tab:layers} sketches what each layer catches and
-misses.
+detector: endpoint signing covers payload integrity, operator and SIEM
+monitoring cover post-admission behavior, and \otashield{} covers network-side
+admission and bounded detection.
 
 \subsection{Resource and deployment cost}\label{sec:cost}
 
 Unlike CPU-based IDS, the data-plane layer pays its cost in MAU stages,
 SRAM, and amortized switch hardware rather than in cores and watts.
-Supplementary Table~\ref{tab:cost} collects the measured resource footprint.
+We summarize the measured resource footprint below.
 
 Table~\ref{tab:mau-resource} gives the per-component placement extracted
 from the deployed build's compiler output. \otashield{} uses all 12
@@ -2185,7 +2182,7 @@ is marginal once the ASIC is on), while CPU IDS power scales with offered
 load.
 
 At the 50-unit fleet measured here, Suricata is roughly 2$\times$ cheaper
-in \$/BMS-year at list prices; we report Supplementary Table~\ref{tab:cost} as a direct
+in \$/BMS-year at list prices; we report this as a direct
 measurement at our evaluated scale rather than as a claim that
 \otashield{} is cheaper per BMS in absolute terms. The in-network
 deployment contributes performance headroom and co-location with the
@@ -2292,6 +2289,11 @@ multi-hour hardware run logs and the live testbed are not redistributable; the
 artifact README documents what can be reproduced.
 
 %% Declaration of competing interests (required)
+%% Funding (TODO: confirm if any grant applies)
+\section*{Funding}
+This research did not receive any specific grant from funding agencies in the
+public, commercial, or not-for-profit sectors.
+
 \section*{Declaration of competing interests}
 The authors declare that they have no known competing financial
 interests or personal relationships that could have appeared to
@@ -2484,17 +2486,6 @@ production soak~\cite{caselli2015specification} is future work.
   \end{tabular}
 \end{table*}
 
-\begin{figure}[pos=htbp]
-  \centering
-  \includegraphics[width=\columnwidth]{figures/fig_per_experiment.pdf}
-  \caption{Per-trial precision, recall, and F\textsubscript{1} across
-  the \EEightstochasticNTrials{} stochastic E8 trials, with the
-  F\textsubscript{1} bootstrap 95\% CI band shaded. The narrow
-  dispersion shows that stochastic performance stays close to the CI
-  interval reported for E8 in Table~\ref{tab:results}.}
-  \label{fig:per_exp}
-\end{figure}
-
 \begin{figure*}[pos=htbp]
   \centering
   \includegraphics[width=0.88\textwidth]{figures/fig_detection_latency.pdf}
@@ -2536,7 +2527,66 @@ production soak~\cite{caselli2015specification} is future work.
   \label{fig:r5}
 \end{figure}
 
+\section{Build provenance and the R5-gating revision}\label{app:build-provenance}
+
+The results were collected on two successive binaries; this appendix records
+which experiment ran on which. The deployed build gates the fleet-fanout
+counter (R5) on \texttt{r2\_fired} and arms the per-source
+\texttt{hold\_armed\_reg} gate only on R5, which sits behind the terminal R2
+drop and is therefore inert on reachable input (\S\ref{sec:cascade-fix},
+\S\ref{sec:known-correctness}). An earlier un-gated build armed that gate on
+\emph{any} rule fire, so a benign rollout that tripped R1 dropped the source's
+subsequent packets before the arbiter could clear them, producing
+benign-rollout false positives and an inflated rollback recall (the gate
+incidentally dropped first-contact rollbacks R6 cannot catch). Restricting
+arming to R5 removes this: E12, E19, and \Enineteenp{} were re-measured on the
+deployed build with zero benign-rollout false positives, and the cold-start
+cases now surface as the strict-versus-lenient recall gap
+(\EOneNineprollbackstochasticRecallMean{} vs.\
+\EOneNineprollbackstochasticRecallLenientMean{}; \S\ref{sec:e19p}). The E22
+lifecycle matrix was originally completed only on the un-gated binary (152 of
+160 benign events dropped); its in-scope active-authorized state, re-run on the
+gated build, gives 0/80 false positives, and E7b re-run on the gated build
+gives 0 benign false positives with all 100 rollback attacks caught over 8~h.
+Table~\ref{tab:provenance} summarizes the per-experiment configuration; the
+override table is 5-tuple-keyed on the deployed build throughout
+(\S\ref{sec:e13}).
+
+\begin{table*}[pos=htbp]
+  \centering
+  \caption{Per-experiment build provenance. ``Deployed gated'' is the final
+  binary (R5 r2-gated, per-source hold gate inert, 5-tuple-keyed override
+  table); ``un-gated'' is the earlier binary used before the R5-gating
+  revision. The last column marks whether the result is part of the
+  deployed-build story or is auxiliary/motivating only.}
+  \label{tab:provenance}
+  \footnotesize
+  \begin{tabular}{@{}l l l c@{}}
+    \toprule
+    Experiment(s) & Binary & R5 gating & Deployed story \\
+    \midrule
+    E1, E2, E6, E8, E14      & deployed gated & r2-gated & yes \\
+    E4 (arbiter ablation)    & deployed gated & r2-gated & yes \\
+    E12, E12b                & deployed gated & r2-gated & yes \\
+    E19, \Enineteenp{}       & deployed gated & r2-gated & yes \\
+    E9, E21, E23, E20        & deployed gated & r2-gated & yes \\
+    E10 (incl.\ symmetric)   & deployed gated & r2-gated & yes \\
+    E11, E13, E18            & deployed gated & r2-gated & yes \\
+    E7b (long-horizon)       & deployed gated & r2-gated & yes \\
+    \midrule
+    S1, S2 (200-BMS)   & earlier binary & n/a      & scope only (cap-limited) \\
+    E22 active-authorized    & deployed gated & r2-gated & yes (confirms fix) \\
+    E22 full matrix          & un-gated       & ungated  & motivating only \\
+    \bottomrule
+  \end{tabular}
+\end{table*}
+
+\section{Supplementary figures and tables}\label{app:supp}
+
 \clearpage
+{\footnotesize
+\setlength{\bibsep}{1pt plus 0.2ex}
+\bibliographystyle{unsrtnat}
 \bibliography{references}
 }
 
