@@ -341,7 +341,7 @@ states the full capability, vantage, and scope boundaries.
 
 \begin{table}[pos=htbp]
   \centering
-  \caption{Threats to BESS OTA firmware distribution and where each is detected.}
+  \caption{What can go wrong in BESS OTA distribution, and where each threat is caught.}
   \label{tab:threat}
   \footnotesize
   \begin{tabular}{@{}p{0.27\columnwidth} p{0.63\columnwidth}@{}}
@@ -477,56 +477,6 @@ evaluation rigor; Table~\ref{tab:bui-compare} marks the six axes. None
 of this prior work targets OTA firmware attacks on grid
 infrastructure.\label{sec:related-bui}
 
-\begin{table}[pos=htbp]
-  \centering
-  \caption{Axis-by-axis comparison with Bui et
-  al.~\cite{binh2026p4mqtt}.}
-  \label{tab:bui-compare}
-  \footnotesize
-  \begin{tabular}{@{}p{0.20\columnwidth}p{0.32\columnwidth}p{0.36\columnwidth}@{}}
-    \toprule
-    \textbf{Axis} & \textbf{Bui et al.} & \textbf{\otashield{}} \\
-    \midrule
-    Target platform
-      & BMv2 software reference; no MAU budget or PHV layout
-        constraints.
-      & \tofino{} hardware; reports measured layout against the
-        12-stage MAU budget, 48-byte digest quantum, and register
-        restrictions (\S\ref{sec:design}). \\
-    \addlinespace
-    Target domain
-      & Generic edge-IoT MQTT anomalies.
-      & BESS firmware distribution on a grid-operator path
-        (\S\ref{sec:background}). \\
-    \addlinespace
-    Threat model
-      & Endpoint compromise and topic-ACL abuse.
-      & Channel compromise with valid signing material and authorized
-        topics, fleet-coordinated campaigns. \\
-    \addlinespace
-    Policy model
-      & Stateless topic-prefix authorization.
-      & RAT with Gate~A and Gate~B arbitration
-        (Alg.~\ref{alg:rat-gate}) over per-BMS rollout context. \\
-    \addlinespace
-    Stateful scope
-      & Session-level flow state.
-      & Per-BMS version high-water (R6) and Bloom-gated fleet-fanout
-        counter (R5). \\
-    \addlinespace
-    Evaluation rigor
-      & 99.8\% enforcement on software-timed BMv2.
-      & Hardware latency (median
-        $\approx$\EEightstochasticLatencyMedianMs{}\,ms,
-        p95~$\approx$\EEightstochasticLatencyPninefiveMs{}\,ms),
-        bootstrap F1 CIs over 20 stochastic trials, ablation
-        (\S\ref{sec:e4}), adversarial-boundary sweep (\S\ref{sec:e9}),
-        Suricata/Zeek baseline on identical traffic
-        (\S\ref{sec:e10}). \\
-    \bottomrule
-  \end{tabular}
-\end{table}
-
 \paragraph{OTA firmware security and BESS prior work.}
 This line of work secures the firmware after it arrives, which leaves
 fleet-wide coordination during distribution invisible. Firmware-update
@@ -610,7 +560,7 @@ Table~\ref{tab:responsibilities} states who owns each step.
 
 \begin{table}[pos=htbp]
   \centering
-  \caption{Operational workflow and responsibility split. \otashield{}
+  \caption{Who does what: operator, \otashield{}, and the fleet. \otashield{}
   enforces operator-authored policy on the transit path; endpoint signing
   stays complementary.}
   \label{tab:responsibilities}
@@ -721,39 +671,6 @@ to a specific device and rule rather than reported only in aggregate, in
 the manner of localization-aware ICS detectors~\cite{lin2018tabor}; the
 per-strategy, per-rule breakdown this enables is reported for the mimicry
 sweep in \S\ref{sec:e21}.
-
-\begin{table*}[pos=htbp]
-  \centering
-  \caption{Rollout-Authorization Table fields. The manifest is a
-  per-rollout JSON object loaded by the controller; a HOLD packet
-  passes only when every condition matches.}
-  \label{tab:rat}
-  \footnotesize
-  \begin{tabular}{@{}l p{0.70\textwidth}@{}}
-    \toprule
-    Field & Policy semantics \\
-    \midrule
-    \texttt{authorized\_source\_ips}  & Allow-list of IPv4 addresses
-        permitted to originate firmware PUBLISHes for this rollout. \\
-    \texttt{target\_bms\_list}        & Allow-list of destination BMS
-        IPs within scope of the rollout. \\
-    \texttt{valid\_window\_start/end} & UTC wall-clock window during
-        which the rollout is active. \\
-    \texttt{expected\_payload\_size\_range} & Inclusive byte range for
-        advertised firmware size. \\
-    \texttt{expected\_firmware\_version}    & Version number reported in
-        the OTA header for control-plane sanity check. \\
-    \texttt{max\_concurrent\_targets} & Enforced per-rollout cap on the
-        number of concurrent active sessions a rollout may hold; the
-        controller denies admission beyond it (0~$=$~unlimited). \\
-    \texttt{rollback\_window}         & Optional
-        \{\texttt{min\_version}, \texttt{max\_version}\} pair
-        authorizing a rollback range for this rollout
-        (see \S\ref{sec:rat-gates-6b}). Default-absent: R6 remains a
-        terminal rule. \\
-    \bottomrule
-  \end{tabular}
-\end{table*}
 
 \subsubsection{Gate~A: RAT-gated demotion of R1 fires}\label{sec:rat-gates-6a}
 
@@ -1213,9 +1130,8 @@ precision at 200~BMS is reported separately in S1/S2
 \begin{figure}[pos=htbp]
   \centering
   \includegraphics[width=0.85\columnwidth]{figures/fig_confusion_matrix.pdf}
-  \caption{Pooled confusion matrix across the four scoring experiments
-  (E1 attack detection, E6 oversize, E8 stochastic, E9 R4 evasion;
-  $n = 2257$ decisions). Zero false positives and nine false negatives;
+  \caption{Where the detector's errors fall: pooled confusion matrix over E1, E6, E8, and E9
+  ($n = 2257$ decisions). Zero false positives and nine false negatives;
   the nine FNs come from the stochastic trials of E8 and match its
   recall of~\EEightstochasticRecallMean{}. E4 is an arbiter ablation
   (RAT disabled), not a detector-scoring run, so it is excluded from the
@@ -1411,6 +1327,25 @@ detection regression. Controller-side
 stage-1 measurement ($\approx$29.5~ms) gives end-to-end
 $\approx$40.2~ms. Per-trial outcomes and the first-contact recall
 taxonomy are in Appendix~\ref{app:e19p-firstcontact}.
+
+\begin{table}[pos=htbp]
+  \centering
+  \caption{Rollback detection result (\Enineteenp{}) on the deployed gated
+  build: R6 catches signed-but-older firmware, and first-contact cold starts
+  bound strict recall.}
+  \label{tab:e19p}
+  \footnotesize
+  \begin{tabular}{@{}l l@{}}
+    \toprule
+    Quantity & Value \\
+    \midrule
+    Precision (Wilson 95\% CI) & \EOneNineprollbackstochasticPrecisionMean{} (0 benign FP) \\
+    Strict recall (first contact $=$ miss) & \EOneNineprollbackstochasticRecallMean{} \\
+    Lenient recall (first contact excluded) & \EOneNineprollbackstochasticRecallLenientMean{} \\
+    F\textsubscript{1} (headline, strict) & \EOneNineprollbackstochasticFOneMean{} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
 
 \paragraph{The arbiter adds no attack-precision delta on the gated build (E4).}\label{sec:e4}
 For completeness we confirm the converse: the arbiter is not needed for
@@ -2589,6 +2524,90 @@ production soak~\cite{caselli2015specification} is future work.
 
 \section{Supplementary figures and tables}\label{app:supp}
 
+\begin{table*}[pos=htbp]
+  \centering
+  \caption{Rollout-Authorization Table fields. The manifest is a
+  per-rollout JSON object loaded by the controller; a HOLD packet
+  passes only when every condition matches.}
+  \label{tab:rat}
+  \footnotesize
+  \begin{tabular}{@{}l p{0.70\textwidth}@{}}
+    \toprule
+    Field & Policy semantics \\
+    \midrule
+    \texttt{authorized\_source\_ips}  & Allow-list of IPv4 addresses
+        permitted to originate firmware PUBLISHes for this rollout. \\
+    \texttt{target\_bms\_list}        & Allow-list of destination BMS
+        IPs within scope of the rollout. \\
+    \texttt{valid\_window\_start/end} & UTC wall-clock window during
+        which the rollout is active. \\
+    \texttt{expected\_payload\_size\_range} & Inclusive byte range for
+        advertised firmware size. \\
+    \texttt{expected\_firmware\_version}    & Version number reported in
+        the OTA header for control-plane sanity check. \\
+    \texttt{max\_concurrent\_targets} & Enforced per-rollout cap on the
+        number of concurrent active sessions a rollout may hold; the
+        controller denies admission beyond it (0~$=$~unlimited). \\
+    \texttt{rollback\_window}         & Optional
+        \{\texttt{min\_version}, \texttt{max\_version}\} pair
+        authorizing a rollback range for this rollout
+        (see \S\ref{sec:rat-gates-6b}). Default-absent: R6 remains a
+        terminal rule. \\
+    \bottomrule
+  \end{tabular}
+\end{table*}
+
+\begin{table}[pos=htbp]
+  \centering
+  \caption{Axis-by-axis comparison with Bui et
+  al.~\cite{binh2026p4mqtt}.}
+  \label{tab:bui-compare}
+  \footnotesize
+  \begin{tabular}{@{}p{0.20\columnwidth}p{0.32\columnwidth}p{0.36\columnwidth}@{}}
+    \toprule
+    \textbf{Axis} & \textbf{Bui et al.} & \textbf{\otashield{}} \\
+    \midrule
+    Target platform
+      & BMv2 software reference; no MAU budget or PHV layout
+        constraints.
+      & \tofino{} hardware; reports measured layout against the
+        12-stage MAU budget, 48-byte digest quantum, and register
+        restrictions (\S\ref{sec:design}). \\
+    \addlinespace
+    Target domain
+      & Generic edge-IoT MQTT anomalies.
+      & BESS firmware distribution on a grid-operator path
+        (\S\ref{sec:background}). \\
+    \addlinespace
+    Threat model
+      & Endpoint compromise and topic-ACL abuse.
+      & Channel compromise with valid signing material and authorized
+        topics, fleet-coordinated campaigns. \\
+    \addlinespace
+    Policy model
+      & Stateless topic-prefix authorization.
+      & RAT with Gate~A and Gate~B arbitration
+        (Alg.~\ref{alg:rat-gate}) over per-BMS rollout context. \\
+    \addlinespace
+    Stateful scope
+      & Session-level flow state.
+      & Per-BMS version high-water (R6) and Bloom-gated fleet-fanout
+        counter (R5). \\
+    \addlinespace
+    Evaluation rigor
+      & 99.8\% enforcement on software-timed BMv2.
+      & Hardware latency (median
+        $\approx$\EEightstochasticLatencyMedianMs{}\,ms,
+        p95~$\approx$\EEightstochasticLatencyPninefiveMs{}\,ms),
+        bootstrap F1 CIs over 20 stochastic trials, ablation
+        (\S\ref{sec:e4}), adversarial-boundary sweep (\S\ref{sec:e9}),
+        Suricata/Zeek baseline on identical traffic
+        (\S\ref{sec:e10}). \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+
 \begin{table}[pos=htbp]
   \centering
   \caption{Reference-channel parser portability (E18) across the
@@ -2689,7 +2708,6 @@ production soak~\cite{caselli2015specification} is future work.
     \bottomrule
   \end{tabular}
 \end{table*}
-
 
 \begin{figure*}[pos=htbp]
   \centering
