@@ -1,10 +1,10 @@
 /* OTA-Shield — headers.p4
  *
  * Header definitions for the Tofino Native Architecture pipeline.
- * Phase 1: Ethernet, IPv4, TCP.
- * Phase 2: MQTT fixed header (VarInt 1–4 bytes), topic prefix, packet ID,
- *          20-byte OTA header (Definition 5.1).
- * Phase 3: Session manager metadata + session-finalize digest.
+ *   Ethernet, IPv4, TCP.
+ *   MQTT fixed header (VarInt 1–4 bytes), topic prefix, packet ID,
+ *     20-byte OTA header (Definition 5.1).
+ *   Session manager metadata + session-finalize digest.
  *
  * Simulation conventions (see definitions/05_attack_specs.md §5.1, §5.11):
  *   - MQTT PUBLISH frames use QoS=1 → packet identifier always present.
@@ -174,7 +174,7 @@ struct metadata_t {
     bit<16> r5_threshold_val;
     bit<8>  r5_fired;
 
-    /* Phase 5 — R1 / R2 / R4
+    /* R1 / R2 / R4 register state.
      * r1_last_seen_sec narrowed to bit<16> with a sentinel scheme. The register
      * stores `coarse_time_sec[15:0] | 1` (always non-zero after first write) so
      * `v == 0` in the stateful ALU unambiguously means "never seen" → return
@@ -239,7 +239,7 @@ struct phase4_r5_alert_digest_t {
     bit<32>  ota_size;
 }
 
-/* Phase 5: per-session rule-alert digest. Flag fields are individual
+/* Per-session rule-alert digest. Flag fields are individual
  * bit<8> (0 or 1) rather than a packed nibble — keeps everything byte-
  * aligned for PHV (bit<4> vectors cause SuperCluster allocation failures). */
 struct phase5_rule_alert_digest_t {

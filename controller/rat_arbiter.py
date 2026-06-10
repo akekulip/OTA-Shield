@@ -3,7 +3,7 @@
 This module extracts the Gate A / Gate B arbitration logic from
 `ota_shield_controller.py` so it can be reused off-switch (e.g. to
 apply the same arbitration to a third-party IDS's alerts for a fair
-apples-to-apples baseline — reviewer major concern M7).
+apples-to-apples baseline).
 
 The controller still owns the canonical implementation inside
 `Controller.evaluate_hold` / `_rat_allows` / `_rat_allows_rollback` /

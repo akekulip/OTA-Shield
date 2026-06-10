@@ -158,7 +158,7 @@ parser IngressParser(
         /* 32-byte null-padded topic slot (simulation convention). */
         pkt.extract(hdr.mqtt_topic);
         meta.is_mqtt_publish = 1;
-        /* M4 (IJCIP reviewer): QoS=0 has no packet identifier, so OTA header
+        /* QoS=0 has no packet identifier, so OTA header
          * starts 2 B earlier. QoS lives in flags[2:1] of the fixed-header
          * flags nibble. QoS=1 and QoS=2 both carry the pkt-id. */
         transition select(hdr.mqtt_fh.flags[2:1]) {

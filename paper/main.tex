@@ -5,7 +5,7 @@
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
 \usepackage{microtype}
-\usepackage[numbers]{natbib}
+\usepackage[numbers,sort&compress]{natbib}
 \usepackage{amsmath,amssymb}
 \usepackage{booktabs}
 \usepackage{graphicx}
@@ -247,11 +247,16 @@ all claims to the reference profile measured here. Our contributions are:
   \item A \textbf{hardware-measured evaluation on a 50-unit emulated
     BMS testbed} covering ablation, adversarial sweeps,
     benign-rollout stress, held-out mimicry, override-table capacity,
-    parser portability, and a Suricata/Zeek baseline, with measured
-    blind zones (\EOneSevenmimicryStrategyCatchPct\% mimicry coverage,
-    \EeighteenMfourParsed/\EeighteenMfourVariants{} parser variants
-    parse end-to-end) reported alongside detection
-    performance.
+    parser portability, and a Suricata/Zeek baseline.
+  \item A \textbf{deployment-boundary characterization of programmable
+    in-network OTA security}. Beyond the designed-family success case, it
+    measures the limits set by adaptive mimicry
+    (\EOneSevenmimicryStrategyCatchPct\% coverage, E21), brokered-MQTT
+    source collapse (E20), TCP segmentation (E23), parser variation
+    (\EeighteenMfourParsed/\EeighteenMfourVariants{} variants, E18), and
+    digest-channel and override-table capacity (E11, E13). We report this
+    as a measured boundary rather than a robustness claim: it states where
+    the architecture holds and where an extension is required.
 \end{itemize}
 
 \paragraph{Scope and transferability.} The OTA channel used
@@ -923,6 +928,26 @@ measures adaptive mimicry as the main adversarial blind zone; and E10 compares
 \otashield{} against CPU-based IDS baselines on identical traffic. The remaining
 experiments are support, boundary, or artifact-provenance checks, and the
 \emph{Role} column of Table~\ref{tab:results} marks each one.
+
+\begin{table}[pos=htbp]
+  \centering
+  \caption{Contribution-to-evidence map. Each contribution is tied to the
+  experiment that carries it and to the boundary that bounds it.}
+  \label{tab:contrib-evidence}
+  \footnotesize
+  \begin{tabular}{@{}p{0.34\columnwidth} l p{0.34\columnwidth}@{}}
+    \toprule
+    Contribution & Evidence & Boundary / limitation \\
+    \midrule
+    Bounded attack detection        & E8            & designed family only \\
+    Authorized rollout admission    & E12           & RAT correctness required \\
+    Signed rollback detection       & E19, \Enineteenp{} & first-contact cold start \\
+    CPU-IDS comparison              & E10           & CPU port matches detection quality; the difference is resource placement, not accuracy \\
+    Deployment-boundary characterization & E20, E21, E23, E18 & brokered MQTT, mimicry, TCP segmentation, parser variation \\
+    Capacity and latency            & E11, E13, E14 & generator/digest-channel bound, not switch line-rate \\
+    \bottomrule
+  \end{tabular}
+\end{table}
 
 \begin{itemize}
   \item \textbf{RQ1.} Does the detector classify attack and benign OTA

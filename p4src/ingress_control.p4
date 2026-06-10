@@ -2,9 +2,9 @@
  *
  * Phase 1 — L2 forward + Phase-1 classify digest.
  * Phase 2 — MQTT PUBLISH digest.
- * Phase 3 — OTA topic classifier + session manager + finalize digest.
- * Phase 4 — R5 fleet monitor (Bloom-gated distinct-target counter).
- * Phase 5 — R1/R2/R4 secondary rules (+ combined rule-alert digest).
+ * OTA topic classifier + session manager + finalize digest.
+ * R5 fleet monitor (Bloom-gated distinct-target counter).
+ * R1/R2/R4 secondary rules (+ combined rule-alert digest).
  */
 
 #ifndef _OTA_SHIELD_INGRESS_CONTROL_P4_

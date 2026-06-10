@@ -1,6 +1,6 @@
 /* OTA-Shield — secondary_rules.p4
  *
- * Phase 5: R1 (frequency), R4 (size). R2 is an exact-match table in
+ * R1 (frequency), R4 (size). R2 is an exact-match table in
  * ingress_control.p4. R3 is controller-side.
  *
  * Tofino 1 MAU compile constraints addressed here:

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""OTA-Shield controller — Phase 5 (cumulative through Phase 1).
+"""OTA-Shield controller.
 
-Phase-5 additions (on top of Phase 4):
+Responsibilities:
   * Install authorized sources (R2) and BMS IP→index (R1) tables from rat.json.
   * Set R1 and R4 thresholds at startup (defaults from Definition 3.5–3.8).
   * Background thread: write `coarse_time_reg[0]` every 1 s with current epoch
@@ -34,8 +34,8 @@ try:
 except ImportError:  # pragma: no cover
     bfrt_client = None
 
-# M6 (IJCIP reviewer major concern): signed-manifest + hot-reload +
-# max_concurrent_targets enforcement live in a sibling module so the
+# Signed-manifest + hot-reload + max_concurrent_targets enforcement
+# live in a sibling module so the
 # controller file stays focused on data-plane glue. See rat_lifecycle.py
 # for the journal-hygiene rationale.
 from rat_lifecycle import (
@@ -66,7 +66,7 @@ DIGEST_INSTANCE_NAMES = (
 )
 
 SESSION_OVERRIDE_TABLE = "Ingress.session_action_override"
-HOLD_OVERRIDE_TTL_S    = 5.0   # fail-closed window per Phase 6 spec
+HOLD_OVERRIDE_TTL_S    = 5.0   # fail-closed override window (seconds)
 DIGEST_NAME_PREFIXES = (
     "",                         # bare instance name
     "IngressDeparser.",         # control-scoped
@@ -97,7 +97,7 @@ R4_MAX_BYTES        = 2 * 1024 * 1024  # 2 MB
 
 
 def parse_args() -> argparse.Namespace:
-    p = argparse.ArgumentParser(description="OTA-Shield controller (Phase 5)")
+    p = argparse.ArgumentParser(description="OTA-Shield controller")
     p.add_argument("--grpc-addr", default=DEFAULT_GRPC)
     p.add_argument("--p4-name", default=DEFAULT_P4_NAME)
     p.add_argument("--client-id", type=int, default=DEFAULT_CLIENT_ID)
@@ -310,7 +310,7 @@ class Controller:
             table.entry_add(self.target, [key], [data])
         logging.info("Installed %d BMS index entries.", min(len(bms_ips), 64))
 
-    # -- Phase 6: session-action override helpers ------------------------
+    # -- session-action override helpers ---------------------------------
     def install_session_override(self, src_ip: int, dst_ip: int,
                                   sport: int, dport: int,
                                   action: str,
@@ -427,7 +427,7 @@ class Controller:
                 logging.error("Decision log write failed: %s", exc)
 
     def evaluate_hold(self, rec: dict) -> None:
-        """Phase 6/7 RAT-aware policy arbiter.
+        """RAT-aware policy arbiter.
 
         DROP (explicit) → always install drop override (R2 fired: source is
         not authorized, no RAT entry can override that).

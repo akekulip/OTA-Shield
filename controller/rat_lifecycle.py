@@ -1,7 +1,6 @@
 """RAT manifest lifecycle: signed load, hot reload, concurrency enforcement.
 
-This module closes the IJCIP reviewer major concern M6, which flagged three
-lifecycle gaps in the prior RAT-on-disk pipeline:
+This module hardens the RAT-on-disk pipeline against three lifecycle gaps:
 
   1. The RAT file was loaded as plain JSON, with no cryptographic integrity.
      An attacker who could write the file (or a misconfigured ops workflow)

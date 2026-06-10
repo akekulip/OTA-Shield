@@ -1,6 +1,6 @@
 /* OTA-Shield — fleet_monitor.p4
  *
- * Phase 4: R5 rule — Bloom-gated distinct-target counter.
+ * R5 rule — Bloom-gated distinct-target counter.
  *
  * Per finding AF-002, R5's stated semantic ("distinct BMS with active OTA
  * session in 60s window") is set cardinality, not frequency. CMS answers
