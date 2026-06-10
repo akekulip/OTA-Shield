@@ -334,7 +334,7 @@ states the full capability, vantage, and scope boundaries.
 
 \begin{table}[pos=htbp]
   \centering
-  \caption{Threat model summary.}
+  \caption{Threats to BESS OTA firmware distribution and where each is detected.}
   \label{tab:threat}
   \footnotesize
   \begin{tabular}{@{}p{0.27\columnwidth} p{0.63\columnwidth}@{}}
@@ -591,6 +591,38 @@ on every packet without a control-plane round-trip.
   arbiter.}
   \label{fig:arch}
 \end{figure*}
+
+\subsection{Operational placement and responsibilities}\label{sec:operational}
+
+\otashield{} sits on the cleartext OTA segment between an upstream
+TLS/VPN terminator and the BMS fleet, and it divides work among the
+parties already present in a BESS OTA rollout. Endpoint firmware signing
+remains in place and complementary; \otashield{} adds a network-side
+admission and detection layer that the endpoints cannot see.
+Table~\ref{tab:responsibilities} states who owns each step.
+
+\begin{table}[pos=htbp]
+  \centering
+  \caption{Operational workflow and responsibility split. \otashield{}
+  enforces operator-authored policy on the transit path; endpoint signing
+  stays complementary.}
+  \label{tab:responsibilities}
+  \footnotesize
+  \begin{tabular}{@{}l p{0.62\columnwidth}@{}}
+    \toprule
+    Party / component & Responsibility \\
+    \midrule
+    Vendor / integrator OTA server & Builds and pushes signed firmware images to the fleet. \\
+    BESS operator & Authors authorized rollout schedules and rollback windows. \\
+    Signed RAT manifest & Encodes the authorized schedule; ed25519-signed by the operator. \\
+    \otashield{} controller & Verifies the signed RAT, installs data-plane tables, arbitrates HOLD events. \\
+    \tofino{} switch & Enforces per-packet and stateful rules at the transit point, at forwarding speed. \\
+    RAT arbiter (Gate~A / Gate~B) & Admits authorized rollouts and rollbacks; holds or denies the rest. \\
+    BMS fleet & Receives admitted firmware; endpoint signature verification stays complementary. \\
+    Operator / SIEM & Receives audit records of every admit, deny, and HOLD decision. \\
+    \bottomrule
+  \end{tabular}
+\end{table}
 
 \subsection{Detection rules}\label{sec:rules}
 
@@ -919,18 +951,23 @@ This section answers five research questions about \otashield{} with
 the testbed and methodology described in
 \S\ref{sec:testbed}--\ref{sec:methodology}.
 
-\noindent\emph{Main result map.} The evaluation has five load-bearing
-results. E8 reports the headline designed-family detection result; E12 tests
-whether authorized rollouts are admitted without false drops; E19 and
-\Enineteenp{} isolate the rollback rule and its first-contact limitation; E21
-measures adaptive mimicry as the main adversarial blind zone; and E10 compares
-\otashield{} against CPU-based IDS baselines on identical traffic. The remaining
-experiments are support, boundary, or artifact-provenance checks, and the
-\emph{Role} column of Table~\ref{tab:results} marks each one.
+\noindent\emph{Main result map.} The evaluation supports three claims.
+\emph{Claim~1, bounded detection works on the designed family}: E8 is the
+headline result (support: E1, E2, E6). \emph{Claim~2, RAT/R6 admission and
+rollback handling work}: E12 admits authorized rollouts without false drops
+and E19/\Enineteenp{} isolate rollback detection and its first-contact limit
+(support: E12b, E7b). \emph{Claim~3, the deployment boundaries are measured}:
+E21, E20, E23, and E18 map the adaptive-mimicry, brokered-MQTT,
+TCP-segmentation, and parser-variation boundaries (support: E11, E13, E14).
+E10 positions the design against CPU IDS baselines on identical traffic,
+showing the contribution is architecture and resource placement, not P4-only
+detectability. Support and boundary experiments are summarized in
+Table~\ref{tab:results} and discussed in the main text only where they change
+interpretation; the \emph{Role} column marks each one.
 
 \begin{table}[pos=htbp]
   \centering
-  \caption{Contribution-to-evidence map. Each contribution is tied to the
+  \caption{Evidence supporting each contribution and its measured boundary. Each contribution is tied to the
   experiment that carries it and to the boundary that bounds it.}
   \label{tab:contrib-evidence}
   \footnotesize
@@ -989,20 +1026,25 @@ pattern to the rule that answers it and to that rule's measured blind zone.
 
 \begin{table*}[pos=htbp]
   \centering
-  \caption{Rule/attack coverage on the final evaluated build. Each rule
-  answers one attack pattern; the rightmost column states the measured
-  blind zone.}
+  \caption{OTA-Shield coverage map: how the evaluated build treats each
+  attack pattern and each authorized operation, the mechanism, the primary
+  evidence, and the measured deployment boundary. Rows~1--4 and~7--9 are
+  attacks; rows~5--6 are authorized operations the arbiter admits.}
   \label{tab:coverage}
   \footnotesize
-  \begin{tabular}{@{}lllll@{}}
+  \begin{tabular}{@{}p{0.165\textwidth} p{0.135\textwidth} p{0.215\textwidth} p{0.115\textwidth} p{0.245\textwidth}@{}}
     \toprule
-    Attack pattern & Rule & Detected in final build? & Main evidence & Known blind zone \\
+    Scenario / operation & OTA-Shield behavior & Mechanism & Evidence & Measured boundary \\
     \midrule
-    Unauthorized firmware source & R2 & Yes, terminal DROP                    & E1, E8                  & brokered-MQTT source-IP collapse (E20) \\
-    Oversize firmware image      & R4 & Yes, $\geq$2.0625~MiB                 & E6, E9                  & 2.0--2.0625~MiB quantization dead zone \\
-    Coordinated fleet fanout     & R5 & Telemetry behind R2, not independent  & E9, \S\ref{sec:cascade-fix} & authorized-source fanout (out of scope) \\
-    Signed version rollback      & R6 & Yes                                   & E19, \Enineteenp{}, E7b & first-contact cold-start \\
-    Rapid replay                 & R1 & Cadence-dependent, non-central        & E1, E9                  & inter-update interval $>\tau_{R1}$ \\
+    Unauthorized-source OTA campaign & DROP (attack) & R2, with R5 telemetry on unauthorized fanout & E8, E9 & brokered-MQTT source-IP collapse (E20) \\
+    Oversize firmware image & DROP (attack) & R4 size threshold & E6, E9 & 2.0--2.0625~MiB quantization dead zone \\
+    Rapid replay / re-push & HOLD, then admit or deny & R1 with Gate~A & E8, E12 & cadence-dependent, non-central \\
+    Signed rollback attack & HOLD, then DROP unless authorized & R6 with Gate~B & E19, \Enineteenp{}, E7b & first-contact cold start \\
+    Authorized rollout & ADMIT & RAT Gate~A & E12 & RAT correctness and freshness \\
+    Authorized rollback & ADMIT only within \texttt{rollback\_window} & RAT Gate~B & E19, E12 & \texttt{rollback\_window} trust surface \\
+    Adaptive mimicry & mostly missed & measured blind zone & E21 & \EOneSevenmimicryStrategyCatchPct\% coverage \\
+    Brokered MQTT & unsupported in this build & source-IP collapse & E20 & needs publisher identity in the inspected header \\
+    TCP-segmented / encrypted path & unsupported in this build & no parseable OTA header, no reassembly & E23, Fig.~\ref{fig:scope} & needs post-termination plaintext or reassembly \\
     \bottomrule
   \end{tabular}
 \end{table*}
@@ -1161,19 +1203,14 @@ one-sided bound described above.
 
 \begin{table*}[pos=htbp]
   \centering
-  \caption{Experiment roadmap indexed by RQ. The \emph{Role} column tiers
-  each experiment as \textsc{Primary} (a load-bearing claim: detection,
-  admission, rollback, mimicry blind zone, or baseline), \textsc{Boundary}
-  (a scope or blind-zone limit), \textsc{Support} (rule correctness,
-  capacity, latency, or cost), or \textsc{Artifact} (manifest-lifecycle and
-  build-provenance evidence). Rows marked $\dagger$ use
-  the trial-level percentile bootstrap of \S\ref{sec:cluster-bootstrap};
-  rows marked $\ddagger$ use Wilson 95\% CIs (or the Clopper--Pearson
-  rule-of-three one-sided bound on zero-event cells); remaining rows are
-  deterministic point counts. Deterministic trials (E1, E4, E6, E10)
-  yield identical outcomes by construction; E11, E12, E13, E21, E18
-  report per-event or per-scenario counts rather than classification
-  F\textsubscript{1}.}
+  \caption{What each experiment tests, the claim it supports, and the
+  boundary it measures. The \emph{Role} column tiers each experiment as
+  \textsc{Primary} (a load-bearing claim), \textsc{Boundary} (a scope or
+  blind-zone limit), \textsc{Support} (correctness, capacity, latency, or
+  cost), or \textsc{Artifact} (manifest-lifecycle and build provenance).
+  Interval methods (bootstrap $\dagger$, Wilson/Clopper--Pearson $\ddagger$,
+  deterministic counts otherwise) are detailed in
+  \S\ref{sec:cluster-bootstrap}.}
   \label{tab:results}
   \footnotesize
   \begin{tabular}{@{}l l l c l l l@{}}
@@ -1203,7 +1240,7 @@ one-sided bound described above.
   \end{tabular}
 \end{table*}
 
-\subsection{RQ1: Correctness on the reference testbed}\label{sec:rq-detection}
+\subsection{Detection and admission are correct on the reference testbed (RQ1)}\label{sec:rq-detection}
 
 \noindent\textit{Finding: rules fire only where they should, and the
 arbiter never drops an authorized rollout, including under stochastic
@@ -1215,7 +1252,7 @@ verdict on every event, that stochastic perturbation does not collapse
 those guarantees, and that the benign dual (the arbiter must not drop
 authorized rollouts) holds end-to-end.
 
-\paragraph{E1: attack detection.} Each trial sends 30 baseline
+\paragraph{Every rule fires on its designed trigger (E1).} Each trial sends 30 baseline
 legitimate PUBLISHes, 30 rapid replays to the same BMSes (R1 fires; the
 replay source is authorized, so R2 does not fire and R5's r2-gated counter
 never runs), and 30 unauthorized-source PUBLISHes (R2 fires), 90~events.
@@ -1226,14 +1263,14 @@ F\textsubscript{1}~=~\EOneattackdetectionFOneMean{}. Each rule fires
 correctly on its designed trigger and the RAT arbiter classifies every
 event as intended.
 
-\paragraph{E2: false-positive baseline.} 50 authorized PUBLISHes per
+\paragraph{No false positives on authorized traffic (E2).} 50 authorized PUBLISHes per
 trial (all \textsc{legit}), 5~trials. No false positives.
 
-\paragraph{E6: R4 oversize detection.} A single MQTT session pushes
+\paragraph{Oversize firmware images are dropped (E6).} A single MQTT session pushes
 2.125~MiB of TCP payload (above the 2~MiB threshold). R4 fires
 deterministically on all 3~trials.
 
-\paragraph{Stochastic detection performance (E8).}\label{sec:e8}
+\paragraph{Designed-family detection holds under stochastic load (E8).}\label{sec:e8}
 E8 mirrors the E1 scenario but introduces realistic stochasticity:
 random BMS ordering, Poisson inter-arrival times (mean 100~ms), and
 ephemeral source ports drawn uniformly from 49152--65535. Each of
@@ -1260,7 +1297,7 @@ unauthorized source, and R6 rollback are exercised in separate experiments
 (E6, E9, E21, E19). The headline F\textsubscript{1} therefore covers the
 R1 rapid-replay and R2 unauthorized-source families at stochastic scale on
 the 50-unit testbed; fleet-scaling
-precision at 200~BMS is reported separately in E1$'$/E8$'$
+precision at 200~BMS is reported separately in S1/S2
 (Table~\ref{tab:fleet-scaling}, \S\ref{sec:e1prime}).
 
 \begin{figure}[pos=htbp]
@@ -1287,7 +1324,7 @@ precision at 200~BMS is reported separately in E1$'$/E8$'$
   \label{fig:per_exp}
 \end{figure}
 
-\paragraph{Benign operational rollout (E12).}\label{sec:e12}
+\paragraph{Authorized rollouts are admitted without false drops (E12).}\label{sec:e12}
 E12 answers the dual of the attack experiments: does the arbiter clear
 rollouts that an operator is entitled to run? The workload drives six
 legitimate patterns through Gate~A and Gate~B
@@ -1305,7 +1342,7 @@ labelled \textsc{legit}, so PASS is the correct verdict throughout.
 \begin{figure*}[pos=htbp]
   \centering
   \includegraphics[width=0.55\textwidth]{figures/fig_benign_rollout.pdf}
-  \caption{E12 aggregate outcome across
+  \caption{Authorized-rollout admission outcome (E12) across
   \EOneTwobenignrolloutScenarioTotal{} legitimate events
   (\EOneTwobenignrolloutNTrials{} trials) on the deployed gated build.
   Classify-only silent PASS (no rule fired) covers
@@ -1342,7 +1379,7 @@ Clopper--Pearson one-sided 95\% upper bound of
 events could be mislabelled at the 95\% confidence level) rather than as
 an empirical point estimate. No rule-group produced a false positive.
 
-\paragraph{Signed-manifest fail-safe (E12b).}\label{sec:e12b}
+\paragraph{Signed-manifest tampering fails closed (E12b).}\label{sec:e12b}
 E12b validates the signed-manifest path end-to-end under controlled
 tampering. Each of \EOneTwobsignedNTrials{} trials has two phases:
 Phase~A runs a benign rollout under a valid ed25519-signed RAT; Phase~B
@@ -1358,7 +1395,7 @@ precision failure mode (expired \texttt{valid\_window}, no replacement
 installed) is a distinct lifecycle condition discussed in the RAT
 lifecycle matrix (\S\ref{sec:rat-lifecycle}).
 
-\subsection{RQ2: Arbiter and R6 necessity}\label{sec:rq-ablation}
+\subsection{The arbiter and R6 are necessary for rollback handling (RQ2)}\label{sec:rq-ablation}
 
 \noindent\textit{Finding: the RAT arbiter is necessary for admitting
 authorized operations, not for attack precision. It clears the authorized
@@ -1414,7 +1451,7 @@ first-contact blind spot is a scope limitation addressed in
 \S\ref{sec:discussion}, with a baseline-warmup or cross-source version
 prior as the natural mitigation.
 
-\paragraph{Rollback ablation (E19).}\label{sec:e19}
+\paragraph{R6 is the sole rollback detector (E19).}\label{sec:e19}
 A targeted ablation confirms that R6 is the sole rollback detector and
 that disabling it cannot be compensated by R1 alone. With R6 enabled,
 the arbiter produces \EOneNinerollbackRecallMean{} recall and
@@ -1476,7 +1513,7 @@ stage-1 measurement ($\approx$29.5~ms) gives end-to-end
 $\approx$40.2~ms. Per-trial outcomes and the first-contact recall
 taxonomy are in Appendix~\ref{app:e19p-firstcontact}.
 
-\paragraph{Arbiter ablation (E4), a sanity check.}\label{sec:e4}
+\paragraph{The arbiter adds no attack-precision delta on the gated build (E4).}\label{sec:e4}
 For completeness we confirm the converse: the arbiter is not needed for
 attack precision. Running the E1 workload against a controller launched
 with \texttt{--disable-rat} (which forces every HOLD to DROP) leaves
@@ -1487,7 +1524,7 @@ decision is a HOLD the RAT clears, because R5 is gated on
 \texttt{r2\_fired} and never charges on an authorized rollout. The
 arbiter's value is in admission (E12, E19), not attack precision.
 
-\subsection{RQ3: Adversarial robustness}\label{sec:rq-adversarial}
+\subsection{Adversarial robustness and its measured boundaries (RQ3)}\label{sec:rq-adversarial}
 
 \noindent\textit{Finding: adversaries who shape traffic around each
 rule's threshold can escape the data plane:
@@ -1512,7 +1549,7 @@ attack across a realistic deployment horizon.
   \label{fig:co-equal}
 \end{figure}
 
-\paragraph{Adversarial evasion sweeps (E9).}\label{sec:e9}
+\paragraph{Evasion sweeps map the rule boundaries (E9).}\label{sec:e9}
 E9 probes the detection boundaries of R1, R4, and R5 by varying the
 attack parameter across the threshold edge. \emph{R5 sweep:} fanout
 sizes \{3, 4, 5, 6, 7, 10, 15, 20\} with disjoint BMS ranges and
@@ -1563,7 +1600,7 @@ individual BMSes receive firmware at most once per maintenance window
 what happens when that assumption is violated, and its FP rate should be
 interpreted as a sensitivity bound, not an operational FP measurement.
 
-\paragraph{Per-strategy adaptive mimicry (E21).}\label{sec:e21}
+\paragraph{Adaptive mimicry exposes the main blind zone (E21).}\label{sec:e21}
 E21 probes each rule's documented blind zone with five near-threshold
 attack strategies, each labelled \textsc{attack} and emitted in its own
 campaign over \EOneSevenmimicryNTrials{} repetitions
@@ -1583,7 +1620,7 @@ re-hits the same BMS with a second replay in each pair.
 
 \begin{table}[pos=htbp]
   \centering
-  \caption{E21 rule-fire breakdown per mimicry strategy under
+  \caption{Rule fires per mimicry strategy (E21) under
   per-strategy isolation, summed over \EOneSevenmimicryNTrials{}
   campaigns (\EOneSevenmimicryStrategyTotal{} attack events total).
   Each strategy is designed to evade a specific data-plane rule;
@@ -1637,7 +1674,7 @@ needed to close them.
 \begin{figure}[pos=htbp]
   \centering
   \includegraphics[width=0.92\columnwidth]{figures/F6_mimicry_per_strategy.pdf}
-  \caption{E21 per-strategy adaptive-mimicry detection rate over
+  \caption{Per-strategy adaptive-mimicry detection rate (E21) over
   \EOneSevenmimicryNTrials{} campaigns; error bars are Wilson 95\% CIs.
   Only \texttt{r1-late} produces any detection (R1 on the second replay,
   \EOneSevenmimicryRoneLateRate{}); every sub-threshold strategy evades
@@ -1647,7 +1684,7 @@ needed to close them.
   \label{fig:mimicry}
 \end{figure}
 
-\paragraph{TCP-segmentation evasion battery (E23).}\label{sec:e23-tcp}
+\paragraph{TCP segmentation defeats a header-bound parser (E23).}\label{sec:e23-tcp}
 The data plane parses the MQTT/OTA header per packet; it performs no TCP
 reassembly. We measure the consequence directly with a $5\times5$
 battery: five segmentation evasions against the five header-dependent
@@ -1678,7 +1715,7 @@ reassembling endpoint check) is required to close this class.
 \begin{figure}[pos=htbp]
   \centering
   \includegraphics[width=0.92\columnwidth]{figures/F15_tcp_evasion.pdf}
-  \caption{E23 TCP-segmentation evasion battery: observed per-cell drop
+  \caption{TCP-segmentation evasion (E23): observed per-cell drop
   rate over 10 trials/cell (250 trials), each cell reset-isolated; cell
   text is observed rate (predicted in parens). Header-split evasions
   defeat every rule including the source-keyed R2; only
@@ -1689,7 +1726,7 @@ reassembling endpoint check) is required to close this class.
   \label{fig:tcp-evasion}
 \end{figure}
 
-\paragraph{Long-horizon slow-cadence trace (E7b).}\label{sec:e7b}
+\paragraph{Detection holds over a long slow-cadence trace (E7b).}\label{sec:e7b}
 E7b runs the deployed gated build over a realistic deployment horizon:
 \EsevenbNEvents{} events (\EsevenbNBenign{} benign updates plus
 \EsevenbNAttack{} rollback attacks) over \EsevenbDurationHours{}~h of wall
@@ -1717,7 +1754,7 @@ isolates the cold-start gap with stochastic first-contact rollbacks
 build sustains P~=~R~=~F\textsubscript{1}~=~1.000 across an 8~h trace, with
 the arbiter containing every benign rule fire.
 
-\subsection{RQ4: CPU-based IDS baselines}\label{sec:rq-baseline}
+\subsection{Comparison with CPU-based IDS baselines (RQ4)}\label{sec:rq-baseline}
 
 \noindent\textit{Finding: off-the-shelf Suricata and Zeek fire on the
 fanout shape of legitimate rollouts and cannot suppress it, so they
@@ -1734,7 +1771,7 @@ requires a \tofino{} pipeline. RQ4 replays one E1 PCAP through five
 baseline configurations that together span the expressive ceiling
 reachable without a policy-aware arbiter.
 
-\paragraph{CPU-based IDS baselines (E10).}\label{sec:e10}
+\paragraph{A CPU port matches detection quality (E10).}\label{sec:e10}
 We captured a PCAP of a single E1 trial (\EtenSuricataNDecisions{}~events:
 60 attack + 30 legitimate) and replayed it through four baseline
 configurations plus one apples-to-apples combination. R6 is omitted from
@@ -1745,7 +1782,7 @@ summarizes the arbitration gap they expose.
 
 \begin{table}[pos=htbp]
   \centering
-  \caption{E10 CPU-IDS baselines on the E1 PCAP replay
+  \caption{CPU IDS baselines on identical traffic (E10), on the E1 PCAP replay
   (\EtenSuricataNDecisions{}~events: 60 attack + 30 legitimate).
   Variants (i)--(iv) are CPU-IDS configurations; variants~(v) and~(vi)
   post-process variants~(i) and~(iii)'s alerts respectively through the
@@ -1905,7 +1942,7 @@ directly.
   \label{fig:suricata}
 \end{figure*}
 
-\subsection{RQ5: Latency, throughput, capacity, and portability cost}\label{sec:rq-cost}
+\subsection{Latency, capacity, and portability cost (RQ5)}\label{sec:rq-cost}
 
 \noindent\textit{Finding: median latency is
 \EEightstochasticLatencyMedianMs{}~ms (p95
@@ -1919,7 +1956,7 @@ detection latency (E14 on the E8 dataset), controller-side digest
 ingestion rate (E11), session-override table capacity (E13), and the
 parser's sensitivity to MQTT-profile variations (E18).
 
-\paragraph{Detection latency and per-stage breakdown (E14).}\label{sec:e14}
+\paragraph{End-to-end latency is dominated by transport, not the ASIC (E14).}\label{sec:e14}
 \begin{figure*}[pos=htbp]
   \centering
   \includegraphics[width=0.88\textwidth]{figures/fig_detection_latency.pdf}
@@ -1955,7 +1992,7 @@ state-reset barrier and a timer-based override-TTL sweep contending for
 the gRPC channel; neither is on the fire-to-decision path, and for an OTA
 SLA measured in minutes to hours the tail is tolerable.
 
-\paragraph{Controller digest-channel sustainable rate (E11).}\label{sec:e11}
+\paragraph{The controller sustains the digest channel under offered load (E11).}\label{sec:e11}
 E11 measures the controller's classify/MQTT-parse digest ingestion path
 (phases~1--2), not the HOLD path: the generator sends non-OTA PUBLISHes to
 a destination outside the authorized fleet, so no rule fires and no
@@ -1973,7 +2010,7 @@ referred only to HOLD digests. Line-rate testing of either path needs a
 DPDK generator such as P4TG~\cite{lindner2023p4tg,ihle2025p4tgenhancements}
 and is left to future work.
 
-\paragraph{Override-table capacity (E13/T1.7).}\label{sec:e13}
+\paragraph{The override table has headroom for a 200-source fleet (E13).}\label{sec:e13}
 The deployed \texttt{session\_action\_override} table keys on the full
 5-tuple (\texttt{src\_addr}, \texttt{dst\_addr}, \texttt{dst\_port},
 \texttt{protocol}, \texttt{src\_port}) at \TOneSevenTableSize{} entries,
@@ -2009,7 +2046,7 @@ by T1.7, chosen for per-flow authorization isolation.
 \begin{figure}[pos=htbp]
   \centering
   \includegraphics[width=0.88\columnwidth]{figures/fig_override_capacity.pdf}
-  \caption{E13 (source-IP aggregation variant). Peak active
+  \caption{Override-table occupancy under source-IP aggregation (E13). Peak active
   override-table entries versus offered source-IP cardinality at
   500~pps per window, averaged over a 5~s TTL. Measurements fall exactly
   on $y=x$: one table entry per distinct source IP, independent of
@@ -2018,7 +2055,7 @@ by T1.7, chosen for per-flow authorization isolation.
   \label{fig:override_cap}
 \end{figure}
 
-\paragraph{Scope of the reference channel (E18).}\label{sec:e18}
+\paragraph{Parser portability is bound to the reference framing (E18).}\label{sec:e18}
 E18 sweeps MQTT-level parameter variations (topic length, QoS level,
 retain flag) to characterize how tightly the parser is bound to the
 reference-channel assumptions. This is a scoping result rather than a
@@ -2030,7 +2067,7 @@ the core MQTT-parameter sweep.
 
 \begin{table}[pos=htbp]
   \centering
-  \caption{E18 reference-channel portability across the
+  \caption{Reference-channel parser portability (E18) across the
   \EeighteenMfourVariants{}-variant MQTT-parameter sweep on the deployed
   parser. PARSED = the parser extracted a valid OTA header; PARSER-MISS =
   the packet was classified as non-OTA and forwarded unflagged. No variant
@@ -2080,14 +2117,14 @@ the headline portability claim
 (\EeighteenMfourParsed{}/\EeighteenMfourVariants{} parse under the
 current binary).
 
-\paragraph{200-BMS fleet replay (E1$'$, E8$'$).}\label{sec:e1prime}
+\paragraph{Detection holds at 200-BMS scale; precision is cap-limited (S1, S2).}\label{sec:e1prime}
 The reference numbers reported in
 \S\ref{sec:rq-detection}--\ref{sec:rq-baseline} are bounded by a 50-BMS
 testbed. To characterize the design at deployment-scale fleet size, we
-replay two fleet-scale traces against the live controller. E1$'$ applies
+replay two fleet-scale traces against the live controller. S1 applies
 a superposed-Poisson workload with \EOnePrimeNbms{} synthetic BMS
 endpoints emitting \EOnePrimeIntendedEvents{} events at an aggregate
-rate of 40~Hz. E8$'$ scales the stochastic E8 mix to the same fleet
+rate of 40~Hz. S2 scales the stochastic E8 mix to the same fleet
 size, producing \EEightPrimeIntendedEvents{} events. Per-BMS rate,
 payload size, and version-bump probability are inherited from the
 50-host long-baseline measurement; only fleet size and the synthetic
@@ -2112,8 +2149,8 @@ starts empty.
     Experiment & Fleet & Precision & Recall & F\textsubscript{1} \\
     \midrule
     E8 (50-BMS headline)  & 50  & \EEightstochasticPrecisionMean{} & \EEightstochasticRecallMean{} & \EEightstochasticFOneMean{} \\
-    E1$'$ (200-BMS, det.)  & 200 & \EOnePrimePrecision{}           & \EOnePrimeRecall{}            & \EOnePrimeFOne{} \\
-    E8$'$ (200-BMS, stoch.) & 200 & \EEightPrimePrecision{}         & \EEightPrimeRecall{}          & \EEightPrimeFOne{} \\
+    S1 (200-BMS, det.)  & 200 & \EOnePrimePrecision{}           & \EOnePrimeRecall{}            & \EOnePrimeFOne{} \\
+    S2 (200-BMS, stoch.) & 200 & \EEightPrimePrecision{}         & \EEightPrimeRecall{}          & \EEightPrimeFOne{} \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -2131,11 +2168,11 @@ beyond the first \PfourBmsIndexCap{} unmapped: a legitimate packet
 addressed to one of them misses the index table, is signalled
 \texttt{action\_code}=2 by the data plane, and lands as a
 \texttt{terminal\_fire} DROP at the arbiter. The aggregate result is
-\EOnePrimePrecision{} precision and \EOnePrimeFOne{} F1 on E1$'$
+\EOnePrimePrecision{} precision and \EOnePrimeFOne{} F1 on S1
 (\EOnePrimeTP{} TP, \EOnePrimeTN{} TN, \EOnePrimeFP{} FP, \EOnePrimeFN{}
 FN), and \EEightPrimePrecision{} precision and \EEightPrimeFOne{} F1 on
-E8$'$. Digest loss at fleet scale is modest (\EOnePrimeDigestLossPct{}\%
-on E1$'$, \EEightPrimeDigestLossPct{}\% on E8$'$), so the digest channel
+S2. Digest loss at fleet scale is modest (\EOnePrimeDigestLossPct{}\%
+on S1, \EEightPrimeDigestLossPct{}\% on S2), so the digest channel
 itself is not the bottleneck.
 
 The construction therefore holds at 200-BMS scale on the rule side but
@@ -2145,15 +2182,15 @@ the 128 the data-plane table already provides is a controller/manifest
 change, and covering a fleet beyond 128 additionally requires a P4
 recompile to widen the BMS-index, R1, and override tables, after which the
 same controller and manifest cover the full fleet. We report
-E1$'$ and E8$'$ alongside the 50-BMS numbers to make explicit which
+S1 and S2 alongside the 50-BMS numbers to make explicit which
 result scales with fleet size (recall) and which depends on a recompile
 (precision at fleet scale).
 
 \FloatBarrier
 %% ====================================================================
-\section{Discussion and Limitations}\label{sec:discussion}
+\section{Deployment Boundaries and Operational Implications}\label{sec:discussion}
 
-\subsection{Interpretation of results}
+\subsection{What the results establish}
 
 On the deployed gated build, E4 shows the terminal rules (R2, R4, R6)
 carry the attack precision without the arbiter: disabling the RAT leaves
@@ -2161,13 +2198,13 @@ precision at 1.0, because R5 is gated on \texttt{r2\_fired} and never
 fires on an authorized rollout. The arbiter's value is on rollback
 admission (E19), not an R5 precision delta. The boundary sweeps (E9) map hardware-imposed
 limits (R4's 64~KiB dead zone between 2.0--2.0625~MiB and R1's
-18.2-hour wrap-around) into the threat model rather than hiding them. No
+18.2-hour wrap-around) into the threat model. No
 single rule is evasion-proof; the multi-rule architecture is
 defense-in-depth within a reference channel. The remainder of this
-section states the limitations we measured, and for each names a
+section states the deployment boundaries we measured, and for each names a
 realistic next step.
 
-\subsection{Limitations}\label{sec:limitations}
+\subsection{Measured deployment boundaries}\label{sec:limitations}
 
 The three deployment paths this scope implies were set out early in
 Fig.~\ref{fig:scope} (\S\ref{sec:background}): a supported cleartext segment
@@ -2297,7 +2334,7 @@ Table~\ref{tab:limits}.
 \begin{table*}[pos=htbp]
   \centering
   \small
-  \caption{Limitations of \otashield{} outside the RAT trust surface.
+  \caption{Measured deployment boundaries and their mitigations.\@ Items outside the RAT trust surface.
   Each row names a limitation, its blind zone or failure mode, and an
   available mitigation path.}
   \label{tab:limits}
@@ -2384,7 +2421,7 @@ comparable to ours.
 
 \begin{table*}[pos=htbp]
   \centering
-  \caption{Position of \otashield{} relative to related in-network
+  \caption{How \otashield{} compares with related in-network
   detectors and CPU-based IDS. Each row reports a metric from the cited
   paper on \emph{that paper's own dataset}; the dataset column makes
   explicit that these are not measured on a shared benchmark, and the
@@ -2486,7 +2523,7 @@ Table~\ref{tab:cost} collects the measured resource footprint.
 
 \begin{table*}[pos=htbp]
   \centering
-  \caption{Resource footprint of \otashield{} on \tofino{}, with rough
+  \caption{Tofino resource footprint of the evaluated build, with rough
   comparison to a CPU-based alternative on the same traffic.
   Dollar-per-BMS-year assumes a five-year amortization of a USD~20\,k
   switch over a 50-unit fleet.}
@@ -2580,7 +2617,7 @@ would need per-packet reassembly at rates the ASIC handles with zero
 incremental cost. Serving such a fleet means raising the 64-entry BMS
 manifest cap (a controller change up to the 128 the table already holds)
 and, beyond 128 BMS, a per-deployment P4 recompile to widen the index;
-without that headroom precision collapses as measured in E1$'$
+without that headroom precision collapses as measured in S1
 (\S\ref{sec:e1prime}). Quantifying the cost-parity
 crossover point is deferred to future work with a DPDK-class traffic
 generator.
@@ -2736,7 +2773,7 @@ bootstrap CI can do so from this table.
 
 \begin{table}[pos=htbp]
   \centering
-  \caption{E8 per-trial confusion-matrix counts and derived metrics.
+  \caption{Per-trial confusion-matrix counts and derived metrics (E8).
   TP/FN/FP/TN are raw event counts; precision, recall, and F1 are
   derived per-trial.}
   \label{tab:e8-per-trial}
@@ -2885,7 +2922,7 @@ the per-experiment configuration.
     E11, E13, E18            & deployed gated & r2-gated & yes \\
     E7b (long-horizon)       & deployed gated & r2-gated & yes \\
     \midrule
-    E1$'$, E8$'$ (200-BMS)   & earlier binary & n/a      & scope only (cap-limited) \\
+    S1, S2 (200-BMS)   & earlier binary & n/a      & scope only (cap-limited) \\
     E22 active-authorized    & deployed gated & r2-gated & yes (confirms fix) \\
     E22 full matrix          & un-gated       & ungated  & motivating only \\
     \bottomrule
