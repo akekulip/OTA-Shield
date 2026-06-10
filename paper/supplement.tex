@@ -58,7 +58,7 @@
 
 \shorttitle{Supplementary material: \otashield}
 \shortauthors{Akekudaga et~al.}
-\title[mode=title]{Supplementary Material for \otashield: Hardware-Measured In-Network Admission and Bounded Attack Detection for BESS OTA Firmware Rollouts}
+\title[mode=title]{Supplementary Material: \otashield{}}
 \author[1]{Philip Akekudaga}
 %% TODO: provide Simon's affiliation.
 \author[2]{Simon Wewoliamo Kuseh}
@@ -116,7 +116,7 @@ P4 recompile. The integrity and freshness lifecycle failure modes are
 covered by E12b (\S\ref{sec:e12b}). Table~\ref{tab:provenance} summarizes
 the per-experiment configuration.
 
-\begin{table}[pos=htbp]
+\begin{table*}[pos=htbp]
   \centering
   \caption{Per-experiment build provenance. ``Deployed gated'' is the final
   binary (R5 r2-gated, per-source hold gate inert, 5-tuple-keyed override
@@ -143,7 +143,7 @@ the per-experiment configuration.
     E22 full matrix          & un-gated       & ungated  & motivating only \\
     \bottomrule
   \end{tabular}
-\end{table}
+\end{table*}
 
 \noindent The override table is 5-tuple-keyed on the deployed build
 throughout (\S\ref{sec:e13}); E13 additionally characterizes the optional
@@ -237,7 +237,7 @@ binary rather than an un-gated auxiliary run.
   \end{tabular}
 \end{table}
 
-\begin{table}[pos=htbp]
+\begin{table*}[pos=htbp]
   \centering
   \caption{CPU IDS baselines on identical traffic (E10), on the E1 PCAP replay
   (\EtenSuricataNDecisions{}~events: 60 attack + 30 legitimate).
@@ -259,7 +259,7 @@ binary rather than an un-gated auxiliary run.
     (vi) Suricata permissive + RAT & \EtenSuricataPermRatPrecision     & \EtenSuricataPermRatRecall     & \EtenSuricataPermRatAccuracy   & \EtenSuricataPermRatTP  & \EtenSuricataPermRatFP \\
     \bottomrule
   \end{tabular}
-\end{table}
+\end{table*}
 
 \begin{table*}[pos=htbp]
   \centering
