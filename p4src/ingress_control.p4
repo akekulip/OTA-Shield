@@ -1,7 +1,7 @@
 /* OTA-Shield — ingress_control.p4
  *
- * Phase 1 — L2 forward + Phase-1 classify digest.
- * Phase 2 — MQTT PUBLISH digest.
+ * L2 forward + classify digest.
+ * MQTT PUBLISH digest.
  * OTA topic classifier + session manager + finalize digest.
  * R5 fleet monitor (Bloom-gated distinct-target counter).
  * R1/R2/R4 secondary rules (+ combined rule-alert digest).
@@ -50,7 +50,7 @@ control Ingress(
 
     action set_ota_flag() { meta.is_ota = 1; }
 
-    /* Phase 6: session-action override table — controller installs short-
+    /* Session-action override table — controller installs short-
      * lived entries to force DROP (or PASS) on traffic that failed policy
      * evaluation. T1.7 (Panel-7): promoted from src-IP-only to a 5-tuple
      * key (src_addr, dst_addr, dst_port, protocol, src_port) at size 256.
@@ -235,12 +235,12 @@ control Ingress(
             }
         }
 
-        /* 9b. Phase 6 — combine rule fires into an action_code (PASS/HOLD/
+        /* 9b. Combine rule fires into an action_code (PASS/HOLD/
          * DROP). Unconditional apply to keep predicate chain short; inside,
          * each clause is a single byte-flag compare. */
         policy.apply(hdr, meta);
 
-        /* 9c. Controller-installed session-action override (Phase 6 HOLD
+        /* 9c. Controller-installed session-action override (HOLD
          * policy enforcement). Runs only on TCP flows; keys on 5-tuple
          * (src_addr, dst_addr, dst_port, protocol, src_port).
          *
@@ -274,7 +274,7 @@ control Ingress(
         }
 
         /* 10. Digest priority (one per packet):
-         *     Phase 6 HOLD/DROP decisions beat phase-4/5 rule alerts which
+         *     HOLD/DROP decisions beat rule alerts which
          *     beat session-finalise which beats MQTT-parse which beats
          *     classify. Policy digest carries the highest signal: it tells
          *     the controller both what rules fired AND what action was
@@ -309,7 +309,7 @@ control Egress(
     inout egress_intrinsic_metadata_for_output_port_t eg_oport_md)
 {
     apply {
-        /* Phase 1–5: egress is passthrough. */
+        /* Egress is passthrough. */
     }
 }
 

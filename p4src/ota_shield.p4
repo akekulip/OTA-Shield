@@ -1,11 +1,11 @@
 /* OTA-Shield — ota_shield.p4 (top-level TNA program)
  *
- * Phase progression:
- *   1 — Ethernet/IPv4/TCP parse + L2 forward + classify digest
- *   2 — MQTT parser + OTA header extraction + PUBLISH digest
- *   3 — OTA topic classifier + session manager + session-finalize digest
- *   4 — R5 fleet monitor (Bloom-gated distinct-BMS counter) + R5 alert digest
- *   (upcoming: 5 R1/R2/R4 secondary rules, 6 HOLD path, 7 Modbus baseline)
+ * Pipeline stages:
+ *   Ethernet/IPv4/TCP parse + L2 forward + classify digest
+ *   MQTT parser + OTA header extraction + PUBLISH digest
+ *   OTA topic classifier + session manager + session-finalize digest
+ *   R5 fleet monitor (Bloom-gated distinct-BMS counter) + R5 alert digest
+ *   R1/R2/R4 secondary rules + HOLD path
  *
  * Target:   Intel Tofino 1 (UfiSpace S9180-32X)
  * SDE:      BF-SDE 9.13.2

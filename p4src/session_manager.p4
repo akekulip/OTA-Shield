@@ -1,6 +1,6 @@
 /* OTA-Shield — session_manager.p4
  *
- * Phase 3: Per-session byte counter + first-timestamp + finalize logic.
+ * Per-session byte counter + first-timestamp + finalize logic.
  *
  * Registers:
  *   session_bytes_reg    : u32 × 65536  ~256 KB  (1 MAU stage)

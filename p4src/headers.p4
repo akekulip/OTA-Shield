@@ -42,7 +42,7 @@ const bit<4> MQTT_TYPE_SUBSCRIBE = 8;
 
 const bit<32> OTA_MAGIC = 0x4F544153;   /* "OTAS" */
 
-/* Session table sizing (Phase 3).
+/* Session table sizing.
  * 2^16 entries is sufficient for the 50-BMS testbed with heavy concurrency.
  * Each u32 register occupies 256 KB, comfortably in one MAU stage on Tofino 1.
  */
@@ -86,7 +86,7 @@ header tcp_h {
     bit<16> urgent_ptr;
 }
 
-/* ---------- MQTT (Phase 2) ---------- */
+/* ---------- MQTT ---------- */
 header mqtt_fh_h {
     bit<4> mtype;
     bit<4> flags;
@@ -97,7 +97,7 @@ header mqtt_topic_len_h { bit<16> len; }
 header mqtt_topic32_h   { bit<256> bytes; }
 header mqtt_pkt_id_h    { bit<16>  pkt_id; }
 
-/* ---------- OTA header (Phase 2) ---------- */
+/* ---------- OTA header ---------- */
 header ota_hdr_h {
     bit<32> magic;
     bit<32> version;
@@ -105,7 +105,7 @@ header ota_hdr_h {
     bit<64> hash_hint;
 }
 
-/* ---------- Modbus MBAP (Phase 6 stub) ---------- */
+/* ---------- Modbus MBAP (stub) ---------- */
 header modbus_mbap_h {
     bit<16> txn_id;
     bit<16> proto_id;
@@ -162,7 +162,7 @@ struct metadata_t {
     bit<32> ota_version_parsed;
     bit<32> ota_size_parsed;
 
-    /* Phase 4 — R5
+    /* R5
      * r5_count_val narrowed to bit<16> so range-match threshold table fits in
      * Tofino 1's 5-nibble (20-bit) range-match key budget. Distinct-BMS count
      * in a 60s window is at most ~100, well under 65535. */
@@ -262,7 +262,7 @@ struct phase5_rule_alert_digest_t {
     bit<8>        tcp_flags;
 }
 
-/* Phase 6: HOLD-path decision digest. Emitted when action_code != PASS so
+/* HOLD-path decision digest. Emitted when action_code != PASS so
  * the controller can install a short-lived session-action override entry
  * (DROP) or allow-list override (PASS) in the session_action_override
  * table. Compact struct to stay under the 48-byte learn quantum. */

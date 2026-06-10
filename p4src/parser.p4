@@ -1,9 +1,9 @@
 /* OTA-Shield — parser.p4
  *
- * Phase 1: Ethernet → IPv4 → TCP. Identify MQTT (1883) and Modbus (502).
- * Phase 2: MQTT fixed header (with 1–4 byte VarInt), topic length, 32-byte
+ * Ethernet → IPv4 → TCP. Identify MQTT (1883) and Modbus (502).
+ * MQTT fixed header (with 1–4 byte VarInt), topic length, 32-byte
  *          topic slot, packet identifier (QoS=1), 20-byte OTA header.
- * Phase 6: Modbus MBAP extraction.
+ * Modbus MBAP extraction (stub).
  *
  * Parser state budget: 32 (Gate 2 target). Current states: ~14. Under budget.
  *

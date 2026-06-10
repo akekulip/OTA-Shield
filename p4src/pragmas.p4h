@@ -1,6 +1,6 @@
 /* OTA-Shield — pragmas.p4h
  *
- * Central place to track explicit stage pinning. Phase 1 does not pin anything —
+ * Central place to track explicit stage pinning. The base pipeline does not pin anything;
  * the skeleton is small enough that the compiler's default allocation is fine.
  *
  * As modules are added, add @pragma stage N directives on the table/register

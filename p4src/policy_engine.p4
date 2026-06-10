@@ -1,8 +1,8 @@
 /* OTA-Shield — policy_engine.p4
  *
- * Phase 6: combine per-rule fire flags into a single session-level
+ * Combine per-rule fire flags into a single session-level
  * `action_code` that downstream logic (controller override table, HOLD
- * mirror session, future Modbus interlock) can reason over.
+ * mirror session) can reason over.
  *
  * Mapping (coding_plan.md §6):
  *   R2 fired  -> DROP  (unauthorized source is a hard security boundary)

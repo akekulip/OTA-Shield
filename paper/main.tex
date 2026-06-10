@@ -2225,10 +2225,12 @@ realistic next step.
 The three deployment paths this scope implies were set out early in
 Fig.~\ref{fig:scope} (\S\ref{sec:background}): a supported cleartext segment
 after TLS/VPN termination, and two paths the evaluated build does not cover,
-a brokered path (E20) and an encrypted or TCP-segmented path (E23). The
-paragraphs below detail each.
+a brokered path (E20) and an encrypted or TCP-segmented path (E23). We group
+the measured limitations into placement, parser and protocol,
+adversary-adaptation, scaling and capacity, and artifact and reproducibility
+limits, and for each name a realistic next step.
 
-\paragraph{TLS / VPN scope.} \otashield{} requires placement after
+\paragraph{Placement limits: TLS/VPN scope.} \otashield{} requires placement after
 TLS/VPN termination or access to plaintext OTA metadata. The R1, R4, R5,
 and R6 rules all read fields that the parser extracts from the cleartext
 MQTT PUBLISH and the 20-byte OTA header; on a flow still inside a TLS or
@@ -2241,7 +2243,7 @@ side-effect rule (R7) correlating post-flash bursts in NTP, DNS, and
 DHCP, which would cover encrypted OTA channels whose payload cannot be
 parsed.
 
-\paragraph{Comparative-evaluation scope.} Our baseline comparison spans
+\paragraph{Artifact and reproducibility limits: comparative-evaluation scope.} Our baseline comparison spans
 two tiers run on our own traffic, off-the-shelf signature IDS (Suricata,
 Zeek) and a CPU port of \otashield{}'s own rule and arbiter logic (E10),
 plus a cited-numbers table positioning \otashield{} against prior
@@ -2250,10 +2252,24 @@ ICS-specific IDS on our own PCAPs. The closest neighbour, a P4-MQTT
 topic-enforcement detector~\cite{binh2026p4mqtt}, targets broker ACL
 violations rather than OTA fleet coordination and runs on a software
 (BMv2) target, so a like-for-like port onto the E1/E8 captures would
-convert that prose positioning into a measured point. We leave that port
-to future work.
+convert that prose positioning into a measured point; we leave that port
+to future work. The hardware experiments require an Intel \tofino{} with
+BF-SDE~9.13.2 and the emulated BMS testbed: the released artifact ships the
+P4 source, controller, and result aggregators, but the multi-hour raw run
+logs and the live testbed are not redistributable, so hardware-bound
+results are inspectable through the aggregation path rather than re-runnable
+from the public repository.
 
-\paragraph{Brokered-MQTT source-IP collapse (E20).}\label{sec:e20-broker}
+\paragraph{Parser and protocol limits.} The parser is bound to the
+reference MQTT framing measured in E18: of the eight QoS and topic-length
+variants exercised, \EeighteenMfourParsed{} parse end-to-end and the
+remainder miss on the fixed 32-byte topic-slot assumption. TCP segmentation
+(E23, \S\ref{sec:e23-tcp}) splits the OTA header across segments so that no
+single packet carries the parseable fields, and the data plane performs no
+reassembly, so a header-split attack evades all rules. Variable-length
+topic parsing and a reassembly shim are the corresponding extensions.
+
+\paragraph{Placement limits: brokered-MQTT source-IP collapse (E20).}\label{sec:e20-broker}
 Where the OTA path traverses an MQTT broker rather than reaching the
 fleet directly, a topology some grid profiles mandate, every PUBLISH on
 the BMS-facing wire carries the broker's source IP. We emulate this on
@@ -2276,7 +2292,7 @@ publisher-id F1, because with no publisher-id logic in the controller
 any such number would reflect the IP-keyed all-drop behavior rather than
 a working publisher-id RAT.
 
-\paragraph{RAT trust surface.} Detection accuracy rests on a correct RAT
+\paragraph{Adversary-adaptation limits: RAT trust surface.} Detection accuracy rests on a correct RAT
 manifest. An attacker with write access before controller start, or a
 privileged insider authoring entries, can widen a rollback window and
 suppress R6 for that scope. Because Gate~B matches on
@@ -2285,7 +2301,10 @@ than firmware content, a compromised authorized source can also inject an
 image whose declared version falls inside a legitimate window, and a
 sub-threshold fanout ($\leq 4$, which E21 shows fires R5 on
 $0/1260$ events) carrying such a version passes both gates without ever
-raising a HOLD. The mitigations are operational: short-lived per-rollout
+raising a HOLD. Against an adaptive adversary who reshapes cadence and
+volume, held-out mimicry coverage falls to
+\EOneSevenmimicryStrategyCatchPct\% of attack events (E21). The
+mitigations are operational: short-lived per-rollout
 entries, a signed manifest (the controller verifies an ed25519 signature
 at load and hot-reload and retains the last-known-good cache on failure,
 E12b Phase~B), bounded \texttt{rollback\_window} spans, and a
@@ -2293,7 +2312,7 @@ WARNING-level audit record on every Gate~B demotion. Signature
 verification does not catch replay of an older valid manifest; binding
 manifests into a monotonic chain is left to operator integration.
 
-\paragraph{Per-source HOLD gate.}\label{sec:known-correctness} The
+\paragraph{Scaling and capacity limits: per-source HOLD gate.}\label{sec:known-correctness} The
 \texttt{hold\_armed\_reg} gate is indexed by the low 8~bits of a CRC16 of
 the source IP (256 buckets). On the deployed build it arms only on R5, and
 because R5's counter is gated on \texttt{r2\_fired} behind the terminal R2
@@ -2314,7 +2333,7 @@ established baseline and strict recall is
 no-decisions as misses (\S\ref{sec:e19p},
 Appendix~\ref{app:e19p-firstcontact}).
 
-\paragraph{Bloom sizing for fleet fanout.}\label{sec:bloom-scaling} The R5
+\paragraph{Scaling and capacity limits: Bloom sizing for fleet fanout.}\label{sec:bloom-scaling} The R5
 fanout detector indexes each destination into three 1024-entry Bloom
 filters. Because it gates on \texttt{r2\_fired==1} (\S\ref{sec:impl}),
 the load that matters is unauthorized fanout per 60-s window, not fleet
@@ -2692,9 +2711,9 @@ same signed-manifest boundary that Gate~A already relies on.
 \section{Conclusion}\label{sec:conclusion}
 
 We described \otashield{}, a hardware-measured reference architecture
-for in-network detection of coordinated OTA firmware distribution
-attacks against battery energy storage systems, implemented on an Intel
-\tofino{} programmable switch. The design places an OTA parser and
+for in-network admission of authorized OTA rollouts and bounded
+detection of OTA firmware attacks against battery energy storage
+systems, implemented on an Intel \tofino{} programmable switch. The design places an OTA parser and
 fleet-cardinality counter on the transit path where endpoint signature
 checks are blind, and a policy-aware control-plane arbiter (Gate~A,
 Gate~B) that consults a Rollout-Authorization Table on a cleartext
@@ -2715,7 +2734,10 @@ authorized downgrade exceptions handled explicitly through Gate~B.
 The contribution is the arbitration architecture: a data-plane rule set
 gated so that authorized rollouts never reach the fanout counter, and a
 RAT arbiter that admits the operator rollbacks the version rule would
-otherwise drop. Two scopes bound the result. The
+otherwise drop. A second contribution is the deployment-boundary
+characterization: the evaluation measures where the architecture holds and
+where brokered MQTT, TCP segmentation, parser variation, and adaptive
+mimicry require an extension. Two scopes bound the result. The
 F\textsubscript{1}~=~\EEightstochasticFOneMean{} headline covers the
 designed fleet-fanout family; an adversary who reshapes cadence faces the
 \EOneSevenmimicryStrategyCatchPct\% mimicry coverage instead. Switch
