@@ -1417,7 +1417,7 @@ sizes \{3, 4, 5, 6, 7, 10, 15, 20\} with disjoint BMS ranges and
 65-second pauses; the transition from no-fire to fire occurs at
 fanout~5, matching the compile-time threshold of~4
 (count~$> 4 \Rightarrow$ fire). Above the threshold, P(R5 fires) grows
-as $(N - 4) / N$ (Fig.~\ref{fig:r5}), confirming the rule's intrinsic
+as $(N - 4) / N$, confirming the rule's intrinsic
 $\text{count} > 4$ boundary. This sweep characterizes R5's counter logic
 directly; on the deployed build that counter is gated on
 \texttt{r2\_fired}, so an \emph{authorized} fleet rollout never increments
@@ -1706,7 +1706,7 @@ parser's sensitivity to MQTT-profile variations (E18).
 
 \paragraph{End-to-end latency is dominated by transport, not the ASIC (E14).}\label{sec:e14}
 
-The two-stage split (Fig.~\ref{fig:latency}, medians
+The two-stage split (medians
 \EEightstochasticLatencyMedianMs{}~ms end-to-end) shows that
 \emph{``in-switch''} is not \emph{``in-switch latency''}: stage~1 (generator
 flight, \tofino{} pipeline, gRPC transport) dominates the $\approx$29~ms
@@ -1757,7 +1757,7 @@ variant is retained for fanout-heavy deployments.
 before the 5~s TTL evicts). Keying on source IP instead collapses every
 HOLD from one source into a single entry. Sweeping
 \{\EThirteenAggSrcSweepCounts{}\} distinct source IPs at
-\EThirteenAggRealisedPpsMax{}~pps (Fig.~\ref{fig:override_cap}), peak
+\EThirteenAggRealisedPpsMax{}~pps, peak
 active entries track source-IP cardinality exactly
 (\EThirteenAggSrcSweepPeakActives{}: \EThirteenAggSingleSrcPeakActive{}
 entry despite \EThirteenAggSingleSrcFiveTuples{} distinct 5-tuples in the
@@ -1774,8 +1774,6 @@ reference-channel assumptions. This is a scoping result rather than a
 portability claim: it does not show that the construction ports to an
 arbitrary MQTT profile, only that deviations from the reference framing
 require per-channel re-engineering of the parser.
-the portability sweep reports the observed pipeline outcome per variant in
-the core MQTT-parameter sweep.
 
 The deployed parser parses every variant that keeps the 32-byte topic
 slot (the reference channel and its QoS-2, retain, and QoS-0 variants) and
@@ -2281,13 +2279,6 @@ Writing -- review \& editing.
 \textbf{Mubarak Hussein:} Conceptualization, Methodology, Writing -- review
 \& editing, Supervision.
 
-%% Data availability (required)
-\section*{Data availability}
-The P4 source, controller, and evaluation aggregators are openly available
-(Akekudaga, 2026) at \url{https://github.com/akekulip/OTA-Shield}. The
-multi-hour hardware run logs and the live testbed are not redistributable; the
-artifact README documents what can be reproduced.
-
 %% Declaration of competing interests (required)
 %% Funding (TODO: confirm if any grant applies)
 \section*{Funding}
@@ -2299,12 +2290,19 @@ The authors declare that they have no known competing financial
 interests or personal relationships that could have appeared to
 influence the work reported in this paper.
 
+%% Data availability (required)
+\section*{Data availability}
+The P4 source, controller, and evaluation aggregators are openly available
+(Akekudaga, 2026) at \url{https://github.com/akekulip/OTA-Shield}. The
+multi-hour hardware run logs and the live testbed are not redistributable; the
+artifact README documents what can be reproduced.
+
 %% AI disclosure (required by Elsevier 2024 policy)
 \section*{Declaration of generative AI and AI-assisted technologies in the writing process}
-During the preparation of this work the author used Claude (Anthropic) to
+During the preparation of this work the authors used Claude (Anthropic) to
 assist with code drafting and with language editing (grammar and phrasing).
-After using this tool, the author reviewed and edited the content as needed and
-takes full responsibility for the content of the publication.
+After using this tool, the authors reviewed and edited the content as needed and
+take full responsibility for the content of the publication.
 
 \FloatBarrier
 \appendix
@@ -2363,6 +2361,7 @@ bootstrap CI can do so from this table.
   \end{tabular}
 \end{table}
 
+\FloatBarrier
 \section{\Enineteenp{} first-contact recall taxonomy}\label{app:e19p-firstcontact}
 
 Rollback detection (R6) requires a prior authenticated reference version
@@ -2411,6 +2410,7 @@ gated build that cascade is inert (\S\ref{sec:cascade-fix}), so the
 cold-start misses surface as the gap between strict and lenient
 recall.
 
+\FloatBarrier
 \section{Statistical methodology}\label{app:stats}
 
 Deterministic experiments (E1, E4, E5, E6) repeat a fixed computation and are
@@ -2448,6 +2448,7 @@ zero-FP bounds are event-count based; benign captures span roughly 3.5~min
 (E8, 600 events) and 25~min (E12, 450 events) plus the E12b soak. A multi-hour
 production soak~\cite{caselli2015specification} is future work.
 
+\FloatBarrier
 \section{Per-component resource placement}\label{app:mau}
 
 \begin{table*}[pos=htbp]
@@ -2486,47 +2487,7 @@ production soak~\cite{caselli2015specification} is future work.
   \end{tabular}
 \end{table*}
 
-\begin{figure*}[pos=htbp]
-  \centering
-  \includegraphics[width=0.88\textwidth]{figures/fig_detection_latency.pdf}
-  \caption{End-to-end detection latency on \EEightstochasticLatencyN{}
-  attack events from the stochastic experiment: (a)~histogram,
-  (b)~empirical CDF, (c)~per-stage box plot on log scale. Stage~1 = send
-  $\to$ digest arrival (generator + \tofino{} pipeline + gRPC transport);
-  stage~2 = digest arrival $\to$ controller decision (Python
-  arbitration); end-to-end = stage~1 + stage~2. Medians
-  29.5/4.5/\EEightstochasticLatencyMedianMs{}~ms; p95 values
-  41.8/4.8/\EEightstochasticLatencyPninefiveMs{}~ms. Latency is
-  restricted to attack events because the benign workload interposes
-  inter-trial state-reset barriers ($\sim$2.7~s) between trials; those
-  barriers are driver-side synchronization, not per-event detection
-  latency, so pooling them would overstate the on-path tail.}
-  \label{fig:latency}
-\end{figure*}
-
-\begin{figure}[pos=htbp]
-  \centering
-  \includegraphics[width=0.88\columnwidth]{figures/fig_override_capacity.pdf}
-  \caption{Override-table occupancy under source-IP aggregation (E13). Peak active
-  override-table entries versus offered source-IP cardinality at
-  500~pps per window, averaged over a 5~s TTL. Measurements fall exactly
-  on $y=x$: one table entry per distinct source IP, independent of
-  5-tuple fanout. Zero installs are rejected up to 200 source IPs in our
-  deployment pipeline.}
-  \label{fig:override_cap}
-\end{figure}
-
-\begin{figure}[pos=htbp]
-  \centering
-  \includegraphics[width=0.85\columnwidth]{figures/fig_r5_boundary.pdf}
-  \caption{R5 sensitivity as a function of fanout size: P(R5 fires) grows
-  linearly above threshold 4, characterizing the rule's intrinsic counter.
-  On the deployed build R5's counter is r2-gated, so an authorized fanout
-  never fires R5 (\S\ref{sec:cascade-fix}); the authorized-rollout PASS
-  rate is 1.0 trivially, with no R5 fire to demote.}
-  \label{fig:r5}
-\end{figure}
-
+\FloatBarrier
 \section{Build provenance and the R5-gating revision}\label{app:build-provenance}
 
 The results were collected on two successive binaries; this appendix records
@@ -2548,40 +2509,9 @@ lifecycle matrix was originally completed only on the un-gated binary (152 of
 160 benign events dropped); its in-scope active-authorized state, re-run on the
 gated build, gives 0/80 false positives, and E7b re-run on the gated build
 gives 0 benign false positives with all 100 rollback attacks caught over 8~h.
-Table~\ref{tab:provenance} summarizes the per-experiment configuration; the
+The per-experiment configuration follows from the above; the
 override table is 5-tuple-keyed on the deployed build throughout
 (\S\ref{sec:e13}).
-
-\begin{table*}[pos=htbp]
-  \centering
-  \caption{Per-experiment build provenance. ``Deployed gated'' is the final
-  binary (R5 r2-gated, per-source hold gate inert, 5-tuple-keyed override
-  table); ``un-gated'' is the earlier binary used before the R5-gating
-  revision. The last column marks whether the result is part of the
-  deployed-build story or is auxiliary/motivating only.}
-  \label{tab:provenance}
-  \footnotesize
-  \begin{tabular}{@{}l l l c@{}}
-    \toprule
-    Experiment(s) & Binary & R5 gating & Deployed story \\
-    \midrule
-    E1, E2, E6, E8, E14      & deployed gated & r2-gated & yes \\
-    E4 (arbiter ablation)    & deployed gated & r2-gated & yes \\
-    E12, E12b                & deployed gated & r2-gated & yes \\
-    E19, \Enineteenp{}       & deployed gated & r2-gated & yes \\
-    E9, E21, E23, E20        & deployed gated & r2-gated & yes \\
-    E10 (incl.\ symmetric)   & deployed gated & r2-gated & yes \\
-    E11, E13, E18            & deployed gated & r2-gated & yes \\
-    E7b (long-horizon)       & deployed gated & r2-gated & yes \\
-    \midrule
-    S1, S2 (200-BMS)   & earlier binary & n/a      & scope only (cap-limited) \\
-    E22 active-authorized    & deployed gated & r2-gated & yes (confirms fix) \\
-    E22 full matrix          & un-gated       & ungated  & motivating only \\
-    \bottomrule
-  \end{tabular}
-\end{table*}
-
-\section{Supplementary figures and tables}\label{app:supp}
 
 \clearpage
 {\footnotesize
