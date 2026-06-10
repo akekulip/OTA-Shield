@@ -1599,30 +1599,6 @@ the R6 evaluation is reported separately in E19.
 Table~\ref{tab:e10variants} collects the six variants; the text below
 summarizes the arbitration gap they expose.
 
-\begin{table}[pos=htbp]
-  \centering
-  \caption{CPU IDS baselines on identical traffic (E10), on the E1 PCAP replay
-  (\EtenSuricataNDecisions{}~events: 60 attack + 30 legitimate).
-  Variants (i)--(iv) are CPU-IDS configurations; variants~(v) and~(vi)
-  post-process variants~(i) and~(iii)'s alerts respectively through the
-  same RAT arbiter \otashield{} uses in-band (the apples-to-apples
-  controls).}
-  \label{tab:e10variants}
-  \footnotesize
-  \begin{tabular}{@{}l c c c c c@{}}
-    \toprule
-    Variant & Prec. & Recall & Acc. & TP & FP \\
-    \midrule
-    (i) Suricata min-effort        & N/A                               & \EtenSuricataRecall            & \EtenSuricataAccuracy          & 0  & 0 \\
-    (ii) Suricata stateful         & \EtenSuricataStatefulPrecision    & \EtenSuricataStatefulRecall    & \EtenSuricataStatefulAccuracy  & \EtenSuricataStatefulTP & \EtenSuricataStatefulFP \\
-    (iii) Suricata permissive      & \EtenSuricataPermPrecision        & \EtenSuricataPermRecall        & \EtenSuricataPermAccuracy      & \EtenSuricataPermTP     & \EtenSuricataPermFP \\
-    (iv) Zeek domain-aware         & \EtenZeekPrecision                & \EtenZeekRecall                & \EtenZeekAccuracy              & \EtenZeekTP             & \EtenZeekFP \\
-    (v) Suricata + RAT             & N/A                               & \EtenSuricataRatRecall         & \EtenSuricataRatAccuracy       & \EtenSuricataRatTP      & \EtenSuricataRatFP \\
-    (vi) Suricata permissive + RAT & \EtenSuricataPermRatPrecision     & \EtenSuricataPermRatRecall     & \EtenSuricataPermRatAccuracy   & \EtenSuricataPermRatTP  & \EtenSuricataPermRatFP \\
-    \bottomrule
-  \end{tabular}
-\end{table}
-
 Variant (i) maps R1, R2, R4, R5 to the closest Suricata~7.0.3 primitive
 (threshold, content byte match, dsize) and produces zero alerts; it is
 retained as the expressive-floor anchor. Variant (ii) uses Suricata's
@@ -1829,32 +1805,6 @@ require per-channel re-engineering of the parser.
 Table~\ref{tab:e18} reports the observed pipeline outcome per variant in
 the core MQTT-parameter sweep.
 
-\begin{table}[pos=htbp]
-  \centering
-  \caption{Reference-channel parser portability (E18) across the
-  \EeighteenMfourVariants{}-variant MQTT-parameter sweep on the deployed
-  parser. PARSED = the parser extracted a valid OTA header; PARSER-MISS =
-  the packet was classified as non-OTA and forwarded unflagged. No variant
-  is dropped; the determining factor is the 32-byte topic slot, not QoS or
-  the retain flag.}
-  \label{tab:e18}
-  \footnotesize
-  \begin{tabular}{@{}l l l@{}}
-    \toprule
-    Variant & Parameters & Outcome \\
-    \midrule
-    baseline      & topic=32~B, QoS=1, retain=0 & PARSED \\
-    QoS=2         & topic=32~B, QoS=2, retain=0 & PARSED \\
-    retain=1      & topic=32~B, QoS=1, retain=1 & PARSED \\
-    QoS=0         & topic=32~B, QoS=0, retain=0 & PARSED \\
-    short topic   & topic=16~B, QoS=1, retain=0 & PARSER-MISS \\
-    long topic    & topic=64~B, QoS=1, retain=0 & PARSER-MISS \\
-    QoS=0, short  & topic=16~B, QoS=0, retain=0 & PARSER-MISS \\
-    QoS=0, long   & topic=64~B, QoS=0, retain=0 & PARSER-MISS \\
-    \bottomrule
-  \end{tabular}
-\end{table}
-
 The deployed parser parses every variant that keeps the 32-byte topic
 slot (the reference channel and its QoS-2, retain, and QoS-0 variants) and
 misses every variant that changes the topic length, which shifts the
@@ -1895,30 +1845,6 @@ payload size, and version-bump probability are inherited from the
 addresses 10.0.2.60--10.0.2.209 are extrapolated. Before the run, the
 controller is restarted with the extended manifest so the override table
 starts empty.
-
-\begin{table}[pos=htbp]
-  \centering
-  \caption{50-BMS vs.\ 200-BMS precision and F\textsubscript{1}. Recall is
-  1.000 across the 200-BMS replays (S1, S2); the 50-BMS E8 row reflects nine
-  near-threshold R1 misses (recall \EEightstochasticRecallMean{}). No rollback
-  attempt is missed at either scale. The
-  precision collapse at 200-BMS is attributed to the 64-entry
-  controller/manifest BMS cap. The data-plane \texttt{bms\_ip\_to\_idx}
-  table is itself compiled at 128 entries (Table~\ref{tab:mau-resource}),
-  so legitimate packets addressed to BMS~65--200 are unmapped and take the
-  fail-closed DROP path.}
-  \label{tab:fleet-scaling}
-  \small
-  \begin{tabular}{@{}l c c c c@{}}
-    \toprule
-    Experiment & Fleet & Precision & Recall & F\textsubscript{1} \\
-    \midrule
-    E8 (50-BMS headline)  & 50  & \EEightstochasticPrecisionMean{} & \EEightstochasticRecallMean{} & \EEightstochasticFOneMean{} \\
-    S1 (200-BMS, det.)  & 200 & \EOnePrimePrecision{}           & \EOnePrimeRecall{}            & \EOnePrimeFOne{} \\
-    S2 (200-BMS, stoch.) & 200 & \EEightPrimePrecision{}         & \EEightPrimeRecall{}          & \EEightPrimeFOne{} \\
-    \bottomrule
-  \end{tabular}
-\end{table}
 
 The replay exposes two findings the 50-BMS workload cannot. First,
 recall is preserved: across both scenarios no rollback attempt is missed
@@ -2252,33 +2178,6 @@ real-time threshold adaptation.
 \otashield{} is one layer in a defense-in-depth stack, not a standalone
 detector. Table~\ref{tab:layers} sketches what each layer catches and
 misses.
-
-\begin{table*}[pos=htbp]
-  \centering
-  \caption{Defence-in-depth coverage. Each layer catches a different
-  fraction of the attack space; \otashield{} is one of the three, not a
-  replacement for the others.}
-  \label{tab:layers}
-  \footnotesize
-  \begin{tabular}{@{}l p{0.70\columnwidth}@{}}
-    \toprule
-    Layer & What it catches \\
-    \midrule
-    Endpoint signing (SUIT/Uptane) & Unsigned or mis-signed firmware at
-      the BMS, regardless of how it arrives. Blind to
-      \emph{signed-but-malicious} firmware (stolen signing key) and blind
-      to in-transit fanout. \\
-    \otashield{} data plane    & Naive coordinated campaigns (A1--A4 at
-      their designed thresholds, plus A5 rollback via R6 and Gate~B) at
-      the network aggregation point. Blind to shaped adversaries that
-      stay inside rule blind zones (E21); requires placement after
-      TLS/VPN termination (\S\ref{sec:discussion}). \\
-    Operator rollout dashboard & Slow-drift campaigns visible over hours
-      to days through fleet-version skew. Too slow to stop a
-      minutes-scale attack in flight. \\
-    \bottomrule
-  \end{tabular}
-\end{table*}
 
 \subsection{Resource and deployment cost}\label{sec:cost}
 
@@ -2689,6 +2588,108 @@ production soak~\cite{caselli2015specification} is future work.
 \end{figure}
 
 \section{Supplementary figures and tables}\label{app:supp}
+
+\begin{table}[pos=htbp]
+  \centering
+  \caption{Reference-channel parser portability (E18) across the
+  \EeighteenMfourVariants{}-variant MQTT-parameter sweep on the deployed
+  parser. PARSED = the parser extracted a valid OTA header; PARSER-MISS =
+  the packet was classified as non-OTA and forwarded unflagged. No variant
+  is dropped; the determining factor is the 32-byte topic slot, not QoS or
+  the retain flag.}
+  \label{tab:e18}
+  \footnotesize
+  \begin{tabular}{@{}l l l@{}}
+    \toprule
+    Variant & Parameters & Outcome \\
+    \midrule
+    baseline      & topic=32~B, QoS=1, retain=0 & PARSED \\
+    QoS=2         & topic=32~B, QoS=2, retain=0 & PARSED \\
+    retain=1      & topic=32~B, QoS=1, retain=1 & PARSED \\
+    QoS=0         & topic=32~B, QoS=0, retain=0 & PARSED \\
+    short topic   & topic=16~B, QoS=1, retain=0 & PARSER-MISS \\
+    long topic    & topic=64~B, QoS=1, retain=0 & PARSER-MISS \\
+    QoS=0, short  & topic=16~B, QoS=0, retain=0 & PARSER-MISS \\
+    QoS=0, long   & topic=64~B, QoS=0, retain=0 & PARSER-MISS \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{table}[pos=htbp]
+  \centering
+  \caption{50-BMS vs.\ 200-BMS precision and F\textsubscript{1}. Recall is
+  1.000 across the 200-BMS replays (S1, S2); the 50-BMS E8 row reflects nine
+  near-threshold R1 misses (recall \EEightstochasticRecallMean{}). No rollback
+  attempt is missed at either scale. The
+  precision collapse at 200-BMS is attributed to the 64-entry
+  controller/manifest BMS cap. The data-plane \texttt{bms\_ip\_to\_idx}
+  table is itself compiled at 128 entries (Table~\ref{tab:mau-resource}),
+  so legitimate packets addressed to BMS~65--200 are unmapped and take the
+  fail-closed DROP path.}
+  \label{tab:fleet-scaling}
+  \small
+  \begin{tabular}{@{}l c c c c@{}}
+    \toprule
+    Experiment & Fleet & Precision & Recall & F\textsubscript{1} \\
+    \midrule
+    E8 (50-BMS headline)  & 50  & \EEightstochasticPrecisionMean{} & \EEightstochasticRecallMean{} & \EEightstochasticFOneMean{} \\
+    S1 (200-BMS, det.)  & 200 & \EOnePrimePrecision{}           & \EOnePrimeRecall{}            & \EOnePrimeFOne{} \\
+    S2 (200-BMS, stoch.) & 200 & \EEightPrimePrecision{}         & \EEightPrimeRecall{}          & \EEightPrimeFOne{} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{table}[pos=htbp]
+  \centering
+  \caption{CPU IDS baselines on identical traffic (E10), on the E1 PCAP replay
+  (\EtenSuricataNDecisions{}~events: 60 attack + 30 legitimate).
+  Variants (i)--(iv) are CPU-IDS configurations; variants~(v) and~(vi)
+  post-process variants~(i) and~(iii)'s alerts respectively through the
+  same RAT arbiter \otashield{} uses in-band (the apples-to-apples
+  controls).}
+  \label{tab:e10variants}
+  \footnotesize
+  \begin{tabular}{@{}l c c c c c@{}}
+    \toprule
+    Variant & Prec. & Recall & Acc. & TP & FP \\
+    \midrule
+    (i) Suricata min-effort        & N/A                               & \EtenSuricataRecall            & \EtenSuricataAccuracy          & 0  & 0 \\
+    (ii) Suricata stateful         & \EtenSuricataStatefulPrecision    & \EtenSuricataStatefulRecall    & \EtenSuricataStatefulAccuracy  & \EtenSuricataStatefulTP & \EtenSuricataStatefulFP \\
+    (iii) Suricata permissive      & \EtenSuricataPermPrecision        & \EtenSuricataPermRecall        & \EtenSuricataPermAccuracy      & \EtenSuricataPermTP     & \EtenSuricataPermFP \\
+    (iv) Zeek domain-aware         & \EtenZeekPrecision                & \EtenZeekRecall                & \EtenZeekAccuracy              & \EtenZeekTP             & \EtenZeekFP \\
+    (v) Suricata + RAT             & N/A                               & \EtenSuricataRatRecall         & \EtenSuricataRatAccuracy       & \EtenSuricataRatTP      & \EtenSuricataRatFP \\
+    (vi) Suricata permissive + RAT & \EtenSuricataPermRatPrecision     & \EtenSuricataPermRatRecall     & \EtenSuricataPermRatAccuracy   & \EtenSuricataPermRatTP  & \EtenSuricataPermRatFP \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{table*}[pos=htbp]
+  \centering
+  \caption{Defence-in-depth coverage. Each layer catches a different
+  fraction of the attack space; \otashield{} is one of the three, not a
+  replacement for the others.}
+  \label{tab:layers}
+  \footnotesize
+  \begin{tabular}{@{}l p{0.70\columnwidth}@{}}
+    \toprule
+    Layer & What it catches \\
+    \midrule
+    Endpoint signing (SUIT/Uptane) & Unsigned or mis-signed firmware at
+      the BMS, regardless of how it arrives. Blind to
+      \emph{signed-but-malicious} firmware (stolen signing key) and blind
+      to in-transit fanout. \\
+    \otashield{} data plane    & Naive coordinated campaigns (A1--A4 at
+      their designed thresholds, plus A5 rollback via R6 and Gate~B) at
+      the network aggregation point. Blind to shaped adversaries that
+      stay inside rule blind zones (E21); requires placement after
+      TLS/VPN termination (\S\ref{sec:discussion}). \\
+    Operator rollout dashboard & Slow-drift campaigns visible over hours
+      to days through fleet-version skew. Too slow to stop a
+      minutes-scale attack in flight. \\
+    \bottomrule
+  \end{tabular}
+\end{table*}
+
 
 \begin{figure*}[pos=htbp]
   \centering
