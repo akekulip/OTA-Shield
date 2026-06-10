@@ -190,10 +190,9 @@ ML~\cite{samsonraj2025dddas,chen2024p4nids}, but we are not aware of
 any prior work targeting application-layer OTA firmware attacks on
 BESS infrastructure.
 
-This paper describes \otashield{}. The contribution is an OTA anomaly
-detector for BESS fleets that runs its rule checks in a \tofino{}
-programmable data plane and its admission logic in a small control-plane
-arbiter: four rules compile into the data plane (R2 unauthorized source,
+This paper describes \otashield{}, an OTA anomaly detector for BESS
+fleets. Rule checks run in a \tofino{} programmable data plane and the
+admission logic in a small control-plane arbiter. Four rules compile into the data plane (R2 unauthorized source,
 R4 oversize, R5 unauthorized-source fanout telemetry gated behind R2, R6 per-BMS version
 monotonicity), and the arbiter consults a Rollout-Authorization Table so
 that scheduled rollouts and operator rollbacks are admitted instead of
