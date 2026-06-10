@@ -3,7 +3,7 @@
 #
 # Launches tofino-model + bf_switchd against the compiled pipeline, runs the
 # PTF smoke test suite, then tears everything down. Used by CI and developer
-# iteration. Phase 1 target: test_passthrough.py passes.
+# iteration. Smoke target: the passthrough test must pass.
 
 set -euo pipefail
 

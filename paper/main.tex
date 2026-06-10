@@ -89,7 +89,7 @@ check observed events against the operator's rollout schedule, admitting
 scheduled rollouts and operator rollbacks instead of dropping them.
 
 On a 50-unit emulated BMS testbed the detector classifies the designed
-attack family of replay and unauthorized-source campaigns at
+attack family of replay (rule R1, where enabled) and unauthorized-source campaigns at
 F\textsubscript{1}~=~\EEightstochasticFOneMean{}, with no false alarm on
 the benign traffic in that run (0 of 600 benign events in E8;
 Clopper--Pearson 95\% upper bound \RuleOfThreeSixHundred{}\% on the
@@ -97,7 +97,7 @@ false-positive rate). The median end-to-end decision latency is
 \EEightstochasticLatencyMedianMs{}~ms, well inside the minutes-to-hours
 window over which an OTA campaign reaches a fleet. Where a stateful
 signature-IDS baseline flags benign rollouts as attacks, \otashield{} does
-not, because the fleet-fanout rule counts only unauthorized-source fanout;
+not, because R5's fanout counter is gated on the unauthorized-source flag;
 a CPU port of the same rule-and-arbiter logic matches detection quality
 exactly, leaving only throughput and resource cost as the difference;
 switch line-rate is not measured.
@@ -186,13 +186,12 @@ This paper describes \otashield{}. The contribution is an OTA anomaly
 detector for BESS fleets that runs its rule checks in a \tofino{}
 programmable data plane and its admission logic in a small control-plane
 arbiter: four rules compile into the data plane (R2 unauthorized source,
-R4 oversize, R5 unauthorized-source fanout, R6 per-BMS version
+R4 oversize, R5 unauthorized-source fanout telemetry gated behind R2, R6 per-BMS version
 monotonicity), and the arbiter consults a Rollout-Authorization Table so
 that scheduled rollouts and operator rollbacks are admitted instead of
 dropped. Only the terminal R2 drop is
-resolved entirely in-switch at line rate; R4 and R6 (and R1 where it
-applies) raise a HOLD that the controller resolves in the loop, so we make
-no line-rate throughput claim. We use the \tofino{} for early,
+resolved entirely in-switch; R4 and R6 (and R1 where it applies) raise a
+HOLD that the controller resolves in the loop. We use the \tofino{} for early,
 fail-closed filtering and to compile the rule set into a fixed
 resource budget. The terminal attack rules
 (R2, R4, R6) need no control-plane help to \emph{detect}; the arbiter
@@ -963,33 +962,15 @@ E10 positions the design against CPU IDS baselines on identical traffic,
 showing the contribution is architecture and resource placement, not P4-only
 detectability. Support and boundary experiments are summarized in
 Table~\ref{tab:results} and discussed in the main text only where they change
-interpretation; the \emph{Role} column marks each one.
-
-\begin{table}[pos=htbp]
-  \centering
-  \caption{Evidence supporting each contribution and its measured boundary. Each contribution is tied to the
-  experiment that carries it and to the boundary that bounds it.}
-  \label{tab:contrib-evidence}
-  \footnotesize
-  \begin{tabular}{@{}p{0.34\columnwidth} l p{0.34\columnwidth}@{}}
-    \toprule
-    Contribution & Evidence & Boundary / limitation \\
-    \midrule
-    Bounded attack detection        & E8            & designed family only \\
-    Authorized rollout admission    & E12           & RAT correctness required \\
-    Signed rollback detection       & E19, \Enineteenp{} & first-contact cold start \\
-    CPU-IDS comparison              & E10           & CPU port matches detection quality; the difference is resource placement, not accuracy \\
-    Deployment-boundary characterization & E20, E21, E23, E18 & brokered MQTT, mimicry, TCP segmentation, parser variation \\
-    Capacity and latency            & E11, E13, E14 & generator/digest-channel bound, not switch line-rate \\
-    \bottomrule
-  \end{tabular}
-\end{table}
+interpretation; the \emph{Role} column marks each one. The coverage map
+(Table~\ref{tab:coverage}) ties each contribution to its evidence and its
+measured boundary.
 
 \begin{itemize}
   \item \textbf{RQ1.} Does the detector classify attack and benign OTA
     events correctly on the reference testbed? (E1, E2, E6, E8, E12,
     E12b.)
-  \item \textbf{RQ2.} Is the RAT-aware arbiter necessary, and is R6 the
+  \item \textbf{RQ2.} Is the arbiter necessary for authorized-rollout and rollback admission (as opposed to attack precision), and is R6 the
     sole detector of unauthorized rollback? (E4, E19, \Enineteenp{}.)
   \item \textbf{RQ3.} How does each rule degrade under adversarial
     mimicry, threshold sweeps, and long-horizon slow-cadence traffic?
@@ -1029,7 +1010,7 @@ pattern to the rule that answers it and to that rule's measured blind zone.
   \caption{OTA-Shield coverage map: how the evaluated build treats each
   attack pattern and each authorized operation, the mechanism, the primary
   evidence, and the measured deployment boundary. Rows~1--4 and~7--9 are
-  attacks; rows~5--6 are authorized operations the arbiter admits.}
+  attacks; rows~5--6 are authorized operations the arbiter admits; rows~8--9 are unsupported boundary cases, not attacks.}
   \label{tab:coverage}
   \footnotesize
   \begin{tabular}{@{}p{0.165\textwidth} p{0.135\textwidth} p{0.215\textwidth} p{0.115\textwidth} p{0.245\textwidth}@{}}
@@ -1125,81 +1106,22 @@ threshold derived from the P99.9 tail. R1 is pinned looser
 (14{,}400\,s vs.\ E7's P0.1) to reflect the update cadence of scheduled
 campaigns rather than the minimum legal inter-message gap.
 
-\paragraph{Deterministic versus stochastic experiments.}\label{sec:methodology-bounds}
-Experiments with fixed seeds (E1, E4, E5, E6) function as correctness
-tests; repeating a deterministic computation is not statistical
-sampling, so they are reported without CIs. E8 introduces random seed,
-BMS ordering, and inter-arrival jitter per trial; bootstrap 95\% CIs on
-E8 are the paper's headline statistical result. \Enineteenp{}
-(\EOneNineprollbackstochasticNTrials{}~trials,
-\EOneNineprollbackstochasticEventTotal{}~events:
-\EOneNineprollbackstochasticEventAttack{} rollback attacks and
-\EOneNineprollbackstochasticEventLegit{} legitimate events) randomizes
-per-BMS version ordering and inter-arrival jitter under a fixed top-level
-seed. On the deployed gated build it yields zero benign false positives
-(precision \EOneNineprollbackstochasticPrecisionMean{}, Wilson 95\% CI
-[\EOneNineprollbackstochasticPrecisionCIlo{},
-\EOneNineprollbackstochasticPrecisionCIhi{}]); the genuine between-trial
-variance now lives in \emph{recall}, because a stochastic share of the
-rollbacks are first-contact events that R6 structurally cannot catch on
-the version it has never seen (\S\ref{sec:cascade-fix}). We therefore
-report a strict recall that counts those first-contact misses
-(\EOneNineprollbackstochasticRecallMean{}, Wilson 95\% CI
-[\EOneNineprollbackstochasticRecallCIlo{},
-\EOneNineprollbackstochasticRecallCIhi{}]) alongside the lenient figure
-that excludes them
-(\EOneNineprollbackstochasticRecallLenientMean{}). Because \otashield{}'s
-rules apply hard compile-time thresholds with no tunable per-event score,
-a swept precision--recall curve is degenerate (precision stays at 1.000
-across the operating range), so we report precision, recall, and
-F\textsubscript{$\beta$} at the deployed fixed-threshold operating point
-and present the cross-detector trade-off as operating points on the
-precision--recall plane (Fig.~\ref{fig:suricata}), the appropriate
-presentation under the class skew here~\cite{davis2006prroc}. Where an
-experiment observes
-zero false positives or negatives we report a Clopper--Pearson
-rule-of-three one-sided 95\% upper bound on the error rate
-($\leq\RuleOfThreeSixHundred{}\%$ for E8,
-$\leq\RuleOfThreeFourFifty{}\%$ for E12, i.e.\ at most 0.50\% and
-0.67\% of events could be mislabelled at the 95\% confidence level
-given the observed 0/N count); because these are correctness runs
-rather than independent significance tests, a strict Bonferroni
-correction is inappropriate. For E8 precision specifically, FP~$=$~0
-across all 20 trials and 600 benign events; the bootstrap CI compresses
-to a degenerate [1.000,\,1.000] and is replaced by the Clopper--Pearson
-one-sided 95\% upper bound on FP rate of $\leq$\RuleOfThreeSixHundred{}\%
-(= 3/600, identical to the rule-of-three bound).
-
-\paragraph{Train/test discipline and capture duration.}\label{sec:leakage-discipline}
-\otashield{} has no learned parameters. The rules are fixed thresholds and
-the RAT is operator-supplied, so there is no train/test split to leak
-across. We instead guard against the inflated-score failure mode that
-afflicts learned ICS detectors~\cite{kus2022falsesense} in two ways.
-First, the benign test set contains operationally \emph{unusual but
-legitimate} events: emergency hotfix re-pushes, mid-rollout source
-migration, delayed-retry bursts, and an authorized fleet rollback (E12).
-A PASS verdict is therefore earned against traffic that superficially
-resembles an attack, not against quiescent background. Second, the adversarial sweeps
-(E9, E21, E23, E20) probe attack variants the rules were not hand-tuned
-against, including sub-threshold mimicry and TCP segmentation, so the
-reported coverage is on unseen behavior. The zero-false-positive bounds
-above are tied to event counts rather than wall-clock duration; for
-reference the benign captures span roughly 3.5~min (E8, 600 events) and
-25~min (E12, 450 events) plus the longer signed-manifest soak of E12b. A
-multi-hour production soak in the manner of Caselli et
-al.~\cite{caselli2015specification} is future work; at the emulated
-testbed's compressed cadence we report the event-count bound as primary.
-
-\paragraph{Bootstrap for stochastic CIs.}\label{sec:cluster-bootstrap}
-Stochastic experiments report 95\% confidence intervals from a
-trial-level percentile bootstrap: per-trial point estimates
-(precision, recall, F\textsubscript{1}) are resampled with replacement
-over the $n$ trials, using $B = 2\,000$ replicates, and the 2.5th and
-97.5th percentile of the resample distribution are reported as the CI
-bounds. The confidence level is $\alpha = 0.05$. When all trials yield
-the same point estimate the resulting distribution is degenerate; we
-report the point in that case and instead quote the Clopper--Pearson
-one-sided bound described above.
+\paragraph{Statistical reporting.}\label{sec:methodology-bounds}
+\otashield{} has no learned parameters: the rules are fixed compile-time
+thresholds and the RAT is operator-supplied, so there is no train/test split to
+leak across. Deterministic experiments (E1, E4, E5, E6) are correctness tests
+reported without CIs; stochastic experiments (E8, \Enineteenp{}) report
+trial-level percentile-bootstrap 95\% CIs ($B=2\,000$). Zero-error cells use a
+Clopper--Pearson one-sided 95\% upper bound (rule-of-three:
+$\leq\RuleOfThreeSixHundred{}\%$ for E8, $\leq\RuleOfThreeFourFifty{}\%$ for
+E12). Because the fixed-threshold rules give a degenerate precision--recall
+sweep (precision stays 1.000), we report operating points on the PR plane
+(Fig.~\ref{fig:suricata}), the appropriate presentation under this class
+skew~\cite{davis2006prroc}. For \Enineteenp{} the between-trial variance lives
+in recall, where first-contact rollbacks R6 has never seen are reported under
+both a strict count and a lenient one. Full methodology, the benign-set design
+that guards against inflated scores~\cite{kus2022falsesense}, and the
+\Enineteenp{} recall split are in Appendix~\ref{app:stats}.
 
 \begin{table*}[pos=htbp]
   \centering
@@ -1880,38 +1802,19 @@ capacity, portability), where the in-network deployment is justified on
 cost rather than on detection ceiling.
 
 \paragraph{Symmetric comparison on the full E8 population.}\label{sec:e10-symmetric}%
-The E10 comparison above runs each baseline once on the single-trial E1
-PCAP (90 events), whereas the headline OTA-Shield result (E8) uses 20
-stochastic trials totalling \EEightstochasticEventTotal{} events. To
-match sample size, we reconstructed a per-trial PCAP from each E8
-stochastic trial (same packet format: scapy PA-only, MQTT/OTAS headers
-from the recorded event parameters) and ran Suricata stateful-permissive
-(the best-recall variant~(iii)) across all \EtenSymNTrials{} trials. The
-pooled result on \EtenSymNEvents{} events (\EtenSymTP{} TP,
-\EtenSymTN{} TN, \EtenSymFP{} FP, \EtenSymFN{} FN) is
-P~=~\EtenSymPrecision{}, R~=~\EtenSymRecall{},
-F\textsubscript{1}~=~\EtenSymFOne{}, identical to the single-trial E1
-number, confirming that the asymmetry was in sample size, not in the
-methodological conclusion. The stochastic ordering and ephemeral port
-variation in the E8 trials do not alter Suricata's decision for any
-event: variant~(iii)'s rules fire on every attack event and on every
-legitimate rollout regardless of inter-arrival order, because neither
-R1's \texttt{xbits} expiry nor R5's per-source threshold distinguishes
-ordering within the 60-second window. Compared with OTA-Shield's E8
-result (P~=~\EEightstochasticPrecisionMean{},
-R~=~\EEightstochasticRecallMean{},
-F\textsubscript{1}~=~\EEightstochasticFOneMean{}), the precision gap is
-$\Delta P = \EEightstochasticPrecisionMean{} - \EtenSymPrecision{} =
-0.333$ and the recall gap is 0. The \EtenSymFP{} false positives are 600
-legitimate rollout events that Suricata's stateful rules flag on their
-fanout shape and cannot demote, having no notion of an authorized
-rollout. \otashield{} does not flag them at all, because R5 is r2-gated
-(\S\ref{sec:cascade-fix}). On this workload the precision
-advantage is therefore a \emph{data-plane} property, the r2-gating of R5,
-not a control-plane demotion. The arbiter's complementary role shows up on
-the per-BMS replay cohort: where a legitimate rollout instead trips R1 (a
-re-push inside its window), Gate~A is what admits it, as E12 demonstrates
-directly.
+The E10 baselines above run once on the 90-event E1 PCAP, whereas E8 uses
+\EEightstochasticEventTotal{} events over 20 stochastic trials. To match sample
+size, we reconstructed a per-trial PCAP from each E8 trial and ran Suricata
+stateful-permissive (best-recall variant) across all \EtenSymNTrials{} trials.
+The pooled result on \EtenSymNEvents{} events (P~=~\EtenSymPrecision{},
+R~=~\EtenSymRecall{}, F\textsubscript{1}~=~\EtenSymFOne{}) is identical to the
+single-trial number, so the asymmetry was sample size, not the conclusion. The
+\EtenSymFP{} false positives are legitimate rollouts Suricata flags on fanout
+shape and cannot demote; \otashield{} does not flag them because R5 is r2-gated
+in the data plane (\S\ref{sec:cascade-fix}), so the precision advantage
+($\Delta P = 0.333$, recall gap 0 vs.\ E8) is a data-plane property, not a
+control-plane demotion. Gate~A's complementary role is the per-BMS replay
+cohort, where a legitimate re-push trips R1 and the arbiter admits it (E12).
 
 \begin{figure*}[pos=htbp]
   \centering
@@ -1974,23 +1877,15 @@ parser's sensitivity to MQTT-profile variations (E18).
   latency, so pooling them would overstate the on-path tail.}
   \label{fig:latency}
 \end{figure*}
-Using the timestamps in the E8 logs we split end-to-end latency on the
-\EEightstochasticLatencyN{} attack events (Fig.~\ref{fig:latency}) into
-two stages: stage~1 (send $\to$ controller-side digest arrival: generator
-flight, \tofino{} pipeline, and gRPC transport) and stage~2 (digest
-arrival $\to$ RAT decision, the Python arbitration path). Medians are
-29.5~ms and 4.5~ms, so the end-to-end median is
-\EEightstochasticLatencyMedianMs{}~ms; at p95 the stages contribute
-41.8~ms and 4.8~ms for an end-to-end p95 of
-\EEightstochasticLatencyPninefiveMs{}~ms. The breakdown shows that
-\emph{``in-switch''} is not \emph{``in-switch latency''}: stage~1
-dominates and the ASIC pipeline is a microsecond-scale term inside that
-$\approx$29~ms envelope, while the 4.5~ms Python stage~2 is the
-software-side optimization target if a tighter SLA is needed. The short
-tail comes from two off-path controller events, an inter-trial
-state-reset barrier and a timer-based override-TTL sweep contending for
-the gRPC channel; neither is on the fire-to-decision path, and for an OTA
-SLA measured in minutes to hours the tail is tolerable.
+The two-stage split (Fig.~\ref{fig:latency}, medians
+\EEightstochasticLatencyMedianMs{}~ms end-to-end) shows that
+\emph{``in-switch''} is not \emph{``in-switch latency''}: stage~1 (generator
+flight, \tofino{} pipeline, gRPC transport) dominates the $\approx$29~ms
+envelope while the ASIC pipeline is a microsecond-scale term inside it, and the
+4.5~ms Python stage~2 (RAT arbitration) is the software-side optimization
+target. The short tail is two off-path controller events (a state-reset barrier
+and a timer-based override-TTL sweep), tolerable for an OTA SLA measured in
+minutes to hours.
 
 \paragraph{The controller sustains the digest channel under offered load (E11).}\label{sec:e11}
 E11 measures the controller's classify/MQTT-parse digest ingestion path
@@ -2134,9 +2029,10 @@ starts empty.
 
 \begin{table}[pos=htbp]
   \centering
-  \caption{50-BMS vs.\ 200-BMS precision and F\textsubscript{1}. Recall
-  is preserved at 1.000 for both fleet sizes because detection coverage
-  scales linearly with fleet size (the R1/R4/R6 rule chain is intact). The
+  \caption{50-BMS vs.\ 200-BMS precision and F\textsubscript{1}. Recall is
+  1.000 across the 200-BMS replays (S1, S2); the 50-BMS E8 row reflects nine
+  near-threshold R1 misses (recall \EEightstochasticRecallMean{}). No rollback
+  attempt is missed at either scale. The
   precision collapse at 200-BMS is attributed to the 64-entry
   controller/manifest BMS cap. The data-plane \texttt{bms\_ip\_to\_idx}
   table is itself compiled at 128 entries (Table~\ref{tab:mau-resource}),
@@ -2587,7 +2483,7 @@ ingress MAU stages; the long pole is the chain of dependent rule state
 $\rightarrow$ policy $\rightarrow$ override), each link of which must
 follow its producer's stage. The three range-match threshold checks (R1,
 R4, R5) account for the TCAM use, and the stateful registers account for
-the SALU use, notably the three 1024-entry R5 Bloom filters and the two
+the SALU use: the three 1024-entry R5 Bloom filters and the two
 64\,K-entry session arrays. The full stage occupancy is the binding
 constraint on adding rules: a seventh behavioral rule with its own
 stage-dependent state would not fit without folding existing logic, which
@@ -2624,71 +2520,26 @@ generator.
 
 \subsection{RAT manifest lifecycle}\label{sec:rat-lifecycle}
 
-The RAT is not a hard-coded file. We sketch an operational pipeline: the
-operator's firmware deployment system (for example, Ansible, GitHub
-Actions, or a vendor portal API) emits a \texttt{rat.json} fragment per
-rollout that is merged into the active manifest and loaded into the
-controller on inotify hot-reload (or a 5-second polling fallback when
-inotify is unavailable). Two distinct RAT failure modes are quantified.
-First, integrity: under E12b's signed-manifest tamper test, a single-byte
-flip on the detached signature is rejected by the controller and
-last-known-good policy holds across
-\EOneTwobsignedPhaseBPass{}/\EOneTwobsignedPhaseBEvents{} post-tamper
-events with \EOneTwobsignedPhaseAFP{} false positives across
-\EOneTwobsignedPhaseAEvents{} valid-signature events. The reload path is
-therefore fail-safe. With kernel inotify enabled, across
-\EOneTwobsignedNTrials{} trials the controller logged a
-\texttt{RAT reload REJECTED} event in
-\EOneTwobsignedRejectTrials{}/\EOneTwobsignedNTrials{} trials and
-re-loaded the last-known-good manifest in \texttt{signed=True} mode in
-\EOneTwobsignedSignedOkTrials{}/\EOneTwobsignedNTrials{} trials; the
-controller never silently fell through to unsigned mode. The fail-safe
-behavior itself is independent of the trigger-observation rate. Second,
-freshness: a stale RAT (for example, a manifest 24~hours behind the
-actual rollout schedule) degrades precision because genuine rollouts
-fall outside the active time window, and the arbiter then converts their
-R1 fires to DROP overrides. On a benign-only workload this is a pure-loss
-failure mode: every R1 fire under a stale RAT is a false positive, so an
-operator running on a stale manifest is worse off than one running with
-the RAT disabled on the same benign workload. The lifecycle plumbing (signed
-manifests, inotify hot-reload with polling fallback, stale-window
-alerts) is therefore essential.
-
-\paragraph{Lifecycle matrix (E22).}\label{sec:e22}
-On the deployed gated build we re-ran the active-authorized lifecycle state
-(signed RAT hot-reload, per-event reset, ten trials): all 80
-authorized-rollout events PASS with zero false positives, reproducing E12.
-The remaining four states of the original matrix (pre-rollout, post-expiry,
-active-unauthorized off-target, and max-concurrent) probe enforcement the
-deployed data plane does not perform: an authorized source
-with a valid version, size, and target that deviates only in schedule or
-concurrency carries no unauthorized-source or oversize signal, trips no
-terminal rule, and is admitted rather than quarantined. This is the
-documented R5-gating scope (the defended space is unauthorized-source
-campaigns and unauthorized rollbacks, not off-parameter operation from an
-already-authorized source, \S\ref{sec:cascade-fix}), and schedule freshness
-is enforced at the manifest layer through E12b's signed-reload and
-stale-window path (\S\ref{sec:e12b}), not by a data-plane rule. Two harness
-constraints make a full deployed-build matrix uninformative: per-event
-reset isolates single
-packets, so the R5 fleet-fanout counter cannot fire by construction, and
-although the controller enforces \texttt{max\_concurrent\_targets}
-(\S\ref{sec:policy}), the per-event reset keeps the concurrent-session
-count from accumulating, so the cap cannot be exercised in this harness.
-We therefore report only the in-scope
-active-authorized confirmation and do not treat the off-parameter states as
-detection events; a containment-oriented matrix would require the
-5-tuple-indexed hold register of \S\ref{sec:known-correctness} behind a P4
-recompile, left to future work.
-
-Rollback decisions ride the same lifecycle. Gate~B
-(\S\ref{sec:rat-gates-6b}) expresses an authorized downgrade campaign as
-an optional \texttt{rollback\_window} field on the per-rollout manifest
-fragment, and inherits the manifest's signing and refresh pipeline. The
-defaults favor the operator: a manifest without \texttt{rollback\_window}
-entries keeps R6 terminal, and a stale or absent manifest degrades to
-R6-as-terminal rather than silent suppression. Gate~B sits behind the
-same signed-manifest boundary that Gate~A already relies on.
+The RAT is generated by the operator's deployment system (Ansible, a CI
+pipeline, or a vendor portal), signed, and hot-reloaded into the controller
+(inotify, with a 5-second polling fallback).\label{sec:e22} E12b confirms the
+reload is fail-safe: a single-byte signature flip is rejected, last-known-good
+policy holds across
+\EOneTwobsignedPhaseBPass{}/\EOneTwobsignedPhaseBEvents{} post-tamper events
+with \EOneTwobsignedPhaseAFP{} false positives, and the controller never falls
+through to unsigned mode
+(\EOneTwobsignedSignedOkTrials{}/\EOneTwobsignedNTrials{} trials). A stale
+manifest is a pure-loss failure: genuine rollouts fall outside the active
+window and their R1 fires become DROP overrides, so freshness is an operator
+responsibility. On the deployed gated build the active-authorized lifecycle
+state (E22) reproduces E12 exactly: 80 authorized events PASS with zero false
+positives. The other matrix states probe enforcement the data plane does not
+perform, since off-parameter operation from an already-authorized source is
+admitted by design (the documented R5-gating scope, \S\ref{sec:cascade-fix}).
+Rollback decisions ride the same signed path: Gate~B
+(\S\ref{sec:rat-gates-6b}) expresses an authorized downgrade as an optional
+\texttt{rollback\_window}; without it R6 stays terminal, and a stale manifest
+degrades to R6-as-terminal rather than silent suppression.
 
 \FloatBarrier
 %% ====================================================================
@@ -2935,6 +2786,43 @@ source-IP aggregation variant. E7b was re-run on the deployed gated build
 (\S\ref{sec:e7b}): over the 8~h trace it records 0 benign false positives
 and catches all 100 rollback attacks, so it now reports on the deployed
 binary rather than an un-gated auxiliary run.
+
+\section{Statistical methodology}\label{app:stats}
+
+Deterministic experiments (E1, E4, E5, E6) repeat a fixed computation and are
+reported without CIs. Stochastic experiments report 95\% CIs from a trial-level
+percentile bootstrap: per-trial point estimates are resampled with replacement
+over the $n$ trials ($B=2\,000$ replicates, $\alpha=0.05$); a degenerate
+resample distribution (all trials identical) is reported as the point estimate
+with the Clopper--Pearson one-sided bound instead.\label{sec:cluster-bootstrap}
+For E8 precision, FP~$=$~0 across 20 trials / 600 benign events, so the bootstrap
+CI compresses to $[1.000,1.000]$ and is replaced by the Clopper--Pearson 95\%
+upper bound $\leq\RuleOfThreeSixHundred{}\%$ (=~3/600); E12 uses
+$\leq\RuleOfThreeFourFifty{}\%$. These are correctness runs, not independent
+significance tests, so a Bonferroni correction is inappropriate.
+
+\Enineteenp{} (\EOneNineprollbackstochasticNTrials{}~trials,
+\EOneNineprollbackstochasticEventTotal{}~events:
+\EOneNineprollbackstochasticEventAttack{} rollback attacks,
+\EOneNineprollbackstochasticEventLegit{} legitimate) yields zero benign false
+positives (precision \EOneNineprollbackstochasticPrecisionMean{}, Wilson 95\% CI
+[\EOneNineprollbackstochasticPrecisionCIlo{},
+\EOneNineprollbackstochasticPrecisionCIhi{}]). Its between-trial variance lives
+in recall, because a stochastic share of rollbacks are first-contact events R6
+cannot catch on a version it has never seen (\S\ref{sec:cascade-fix}): strict
+recall counts them (\EOneNineprollbackstochasticRecallMean{}, Wilson 95\% CI
+[\EOneNineprollbackstochasticRecallCIlo{},
+\EOneNineprollbackstochasticRecallCIhi{}]), the lenient figure excludes them
+(\EOneNineprollbackstochasticRecallLenientMean{}).
+
+To guard against the inflated-score failure mode of learned ICS
+detectors~\cite{kus2022falsesense}, the benign test set contains unusual but
+legitimate events (emergency hotfix re-pushes, mid-rollout source migration,
+delayed-retry bursts, an authorized fleet rollback in E12), and the adversarial
+sweeps (E9, E21, E23, E20) probe variants the rules were not tuned against. The
+zero-FP bounds are event-count based; benign captures span roughly 3.5~min
+(E8, 600 events) and 25~min (E12, 450 events) plus the E12b soak. A multi-hour
+production soak~\cite{caselli2015specification} is future work.
 
 {\footnotesize
 \setlength{\bibsep}{1pt plus 0.2ex}

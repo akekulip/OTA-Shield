@@ -13,7 +13,7 @@
 #   make kmod          # load kernel driver (first-time per boot)
 #   make clean
 
-SDE         ?= /home/decps/Downloads/bf-sde-9.13.2
+SDE         ?= /opt/bf-sde-9.13.2
 SDE_INSTALL ?= $(SDE)/install
 P4_PROG     := ota_shield
 P4SRC_DIR   := ../p4src

@@ -1,16 +1,16 @@
 # OTA-Shield Experiment Matrix
 
-Scaffold for reproducible, paper-grade evaluation. Each experiment is a YAML
+Reproducible, paper-grade evaluation harness. Each experiment is a YAML
 config; the `sweep.py` driver runs N trials per config, captures ground
 truth on Vision and controller digests on the switch, and
-`aggregate.py` + `figures.py` turn the per-trial logs into metrics + IEEE-
-style PDFs.
+the per-experiment aggregators (`aggregate_e7b.py`, `aggregate_e12.py`,
+`aggregate_m4.py`, `aggregate_t1.py`, ...) turn the per-trial logs into metrics.
 
 ## Topology assumed
 - **Workstation** — this repo; runs `sweep.py`, `aggregate.py`, `figures.py`.
-- **Switch** `decps@10.10.54.15` — bf_switchd + controller running against
+- **Switch** `<user>@<switch-mgmt-ip>` — bf_switchd + controller running against
   an append-mode JSONL log.
-- **Vision** `decps@10.10.54.19` — NIC `enp59s0f0np0` @ 10.0.1.10; runs
+- **Vision** `<user>@<vision-mgmt-ip>` — data-plane NIC @ 10.0.1.10; runs
   `run_trial.py` via SSH-sudo for scapy injection.
 
 Passwordless SSH must be set up from workstation to both hosts (see

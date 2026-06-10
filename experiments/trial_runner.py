@@ -15,7 +15,7 @@ Every Tier-1 / Tier-2 experiment driver calls
   / INVALID per the panel-8 contract.
 
 A ``--dry-run`` mode exercises the full FSM without touching the switch
-so we can smoke-test wiring before any hardware bring-up.
+so we can smoke-test wiring before touching hardware.
 """
 
 from __future__ import annotations

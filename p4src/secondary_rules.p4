@@ -12,7 +12,7 @@
  *   - "Shift + OR across PHV containers" fails → rule_hits uses concat.
  *
  * Thresholds:
- *   R1_MIN_INTERVAL_SEC = 14400   (4 hours; detects rapid replay A5)
+ *   R1_MIN_INTERVAL_SEC = 14400   (4 hours; detects rapid replay A4)
  *   R4_MAX_BYTES        = 2 MB    (Definition 3.8)
  * Change by re-compiling (fast, no runtime write needed).
  */
